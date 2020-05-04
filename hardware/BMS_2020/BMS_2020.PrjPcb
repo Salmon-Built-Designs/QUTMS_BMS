@@ -140,6 +140,23 @@ GenerateClassCluster=0
 DocumentUniqueId=MVJTIBVM
 
 [Document7]
+DocumentPath=Library\Picoblade\Picoblade 3X1.PcbLib
+AnnotationEnabled=1
+AnnotateStartValue=1
+AnnotationIndexControlEnabled=0
+AnnotateSuffix=
+AnnotateScope=All
+AnnotateOrder=-1
+DoLibraryUpdate=1
+DoDatabaseUpdate=1
+ClassGenCCAutoEnabled=1
+ClassGenCCAutoRoomEnabled=1
+ClassGenNCAutoScope=None
+DItemRevisionGUID=
+GenerateClassCluster=0
+DocumentUniqueId=BFYHDSYT
+
+[Document8]
 DocumentPath=Library\FPC_Connector\FPC_CONNECTORS.PcbLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -156,7 +173,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=JRTWVCEL
 
-[Document8]
+[Document9]
 DocumentPath=Library\DS18B20U+\DS18B20U+T&R.PcbLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -173,7 +190,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=RBCKIPSI
 
-[Document9]
+[Document10]
 DocumentPath=IDCConnectors.PcbLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -190,7 +207,24 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document10]
+[Document11]
+DocumentPath=Library\Picoblade\Picoblade 3X1.SchLib
+AnnotationEnabled=1
+AnnotateStartValue=1
+AnnotationIndexControlEnabled=0
+AnnotateSuffix=
+AnnotateScope=All
+AnnotateOrder=-1
+DoLibraryUpdate=1
+DoDatabaseUpdate=1
+ClassGenCCAutoEnabled=1
+ClassGenCCAutoRoomEnabled=1
+ClassGenNCAutoScope=None
+DItemRevisionGUID=
+GenerateClassCluster=0
+DocumentUniqueId=XADEGLCA
+
+[Document12]
 DocumentPath=Library\FPC_Connector\FPC_CONNECTORS.SchLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -207,7 +241,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=DISIVDPB
 
-[Document11]
+[Document13]
 DocumentPath=Library\DS18B20U+\DS18B20U+T&R.SchLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -224,7 +258,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=WCNQDATD
 
-[Document12]
+[Document14]
 DocumentPath=IDCConnectors.SchLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -241,7 +275,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=FMGMPDCL
 
-[Document13]
+[Document15]
 DocumentPath=QUTMS_LEDLibrary.PcbLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -258,7 +292,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document14]
+[Document16]
 DocumentPath=QUTMS_LEDLibrary.SchLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -275,7 +309,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=HWMRVBIF
 
-[Document15]
+[Document17]
 DocumentPath=StandardTest.PcbLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -292,7 +326,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document16]
+[Document18]
 DocumentPath=StandardTest.SchLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -309,7 +343,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=ZUGZGKQV
 
-[Document17]
+[Document19]
 DocumentPath=ExternalConnectors.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=6
@@ -326,7 +360,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=HOOLFRED
 
-[Document18]
+[Document20]
 DocumentPath=IsolationBarrier.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=3
@@ -343,7 +377,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=KLVPULPP
 
-[Document19]
+[Document21]
 DocumentPath=FFCConnectors.SchLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -360,7 +394,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=PMQZETJJ
 
-[Document20]
+[Document22]
 DocumentPath=FFCConnectors.PcbLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -377,7 +411,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=XUYPDAQO
 
-[Document21]
+[Document23]
 DocumentPath=CANBUS_3V3_Isolated.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -394,7 +428,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=NFOALMYO
 
-[Document22]
+[Document24]
 DocumentPath=CANBUS_3V3_Isolated.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -411,7 +445,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document23]
+[Document25]
 DocumentPath=ExternalConnectors.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -428,7 +462,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document24]
+[Document26]
 DocumentPath=MCU.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -445,7 +479,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document25]
+[Document27]
 DocumentPath=CellMonitor.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
