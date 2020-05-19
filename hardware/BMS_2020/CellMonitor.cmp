@@ -1,0 +1,25 @@
+Component Name : BQ76200PWR
+
+Part Count : 2
+
+Part : U?
+     Pins - (Normal) : 0
+          Hidden Pins : 
+
+Part : U?
+     Pins - (Normal) : 13
+          VDDCP          1              Output
+          BAT            2              Passive
+          CHG_EN         4              Input
+          CP_EN          5              Input
+          DSG_EN         6              Input
+          PMON_EN        7              Input
+          PCHG_EN        8              Input
+          VSS            9              Passive
+          PACKDIV        10             Output
+          PACK           11             Passive
+          DSG            12             Output
+          PCHG           14             Output
+          CHG            16             Output
+          Hidden Pins : 
+
