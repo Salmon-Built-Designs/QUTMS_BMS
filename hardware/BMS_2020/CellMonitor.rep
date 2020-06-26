@@ -1,0 +1,28 @@
+CSV text has been written to file : CellMonitor.csv
+
+Library Component Count : 21
+
+Name                Description
+----------------------------------------------------------------------------------------------------
+
+1.8V Zener Diode    Diode, smd, 1.8V, 5%, 500mW, 0603
+100 Ohm Res         Resistor, smd, 100R, 5%, 0603
+10K Resistor        Resistor, smd, 10 kOhms, 5%, 0.1W, 0603
+10M Resistor        Resistor, smd, 10M, 5%, 0603
+10nF Cap            Capacitor, Ceramic, smd, 10nF, 25V, 10%, XR7, 0603
+10uF Cap            Capacitor, Ceramic, smd, 10uF, 25V, 10%, XR7, 0603
+1N914BWS            Diode, smd, 75V, 5%, 150mA, SOD323F
+1k Res              Resistor, smd, 1k, 5%, 0603
+1uF Cap             Capacitor, Ceramic, smd, 1UF, 25V, 10% X7R, 0603
+220nF Cap           Capacitor, Ceramic, smd, 220nF, 25V, 10%, XR7, 0603
+2N7002K             N-Channel Mosfet, smd, 60V, 300mA, SOT23
+436500515           Micro-Fit 3.0 Vertical Header, 3.00mm Pitch, Single Row, 5 Circuits, with PCB Polarizing Peg, Tin, Glow-Wire Capable, Black
+436500827           Micro-Fit 3.0 Vertical Header, 3.00mm Pitch, Single Row, 8 Circuits, with PCB Polarizing Peg, Tin, Glow-Wire Capable, Black
+470nF Cap           Capacitor, Ceramic, smd, 470nF, 25V, 5%, 0603
+BQ76200PWR          High-voltage battery pack front-end charge/discharge high-side NFET driver
+BQ76930             Battery Monitoring/Fuel Gauge Li-Ion/Li-Polymer/LiFePO4 0V to 16V 30-Pin TSSOP T/R
+CMPDM7002AHC        MOSFET N-CH, 20V, SOT23
+MFU0603FF01000P500  FUSE BOARD MOUNT 1A 32VDC 0603
+PH2520U             N-channel TrenchMOS ultra low level FET
+PMV15UNEAR          MOSFET N-CH, 20V, SOT23
+SF-2410F2000T-2     FUSE BRD MNT 20A 65VAC/65DC 2SMD
