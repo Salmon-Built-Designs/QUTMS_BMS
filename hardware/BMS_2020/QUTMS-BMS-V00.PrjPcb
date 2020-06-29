@@ -3,7 +3,7 @@ Version=1.0
 HierarchyMode=0
 ChannelRoomNamingStyle=0
 ReleasesFolder=
-ChannelDesignatorFormatString=$Component_$RoomName
+ChannelDesignatorFormatString=$Component$ChannelAlpha
 ChannelRoomLevelSeperator=_
 OpenOutputs=1
 ArchiveProject=0
@@ -871,7 +871,7 @@ GenerateClassCluster=0
 DocumentUniqueId=TLPRWHSP
 
 [Document50]
-DocumentPath=test.PcbDoc
+DocumentPath=BMS-S08-V00-TemperatureSensorInterface.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
 AnnotationIndexControlEnabled=0
@@ -885,7 +885,7 @@ ClassGenCCAutoRoomEnabled=1
 ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
-DocumentUniqueId=PVDEBVJE
+DocumentUniqueId=
 
 [GeneratedDocument1]
 DocumentPath=CellMonitor.cmp
