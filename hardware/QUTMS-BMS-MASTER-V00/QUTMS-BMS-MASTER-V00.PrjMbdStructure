@@ -1,0 +1,10 @@
+Record=DiagramHierarchy|SourceDocument=BMS-MASTER-SCH.MbsDoc|Kind=Multi-board Schematic Module|Designator=1|Source=..\BMS_2020\QUTMS-BMS-V00.PrjPcb
+Record=SubProject|SourceDocument=BMS-MASTER-SCH.MbsDoc|ProjectPath=..\BMS_2020\QUTMS-BMS-V00.PrjPcb
+Record=DiagramHierarchy|SourceDocument=BMS-MASTER-SCH.MbsDoc|Kind=Multi-board Schematic Module|Designator=4|Source=..\QUTMS-BMS-TEMPSTRIP-LEFT-V00\QUTMS-BMS-TEMPSTRIP-LEFT-V00.PrjPcb
+Record=SubProject|SourceDocument=BMS-MASTER-SCH.MbsDoc|ProjectPath=..\QUTMS-BMS-TEMPSTRIP-LEFT-V00\QUTMS-BMS-TEMPSTRIP-LEFT-V00.PrjPcb
+Record=DiagramHierarchy|SourceDocument=BMS-MASTER-SCH.MbsDoc|Kind=Multi-board Schematic Module|Designator=3|Source=..\QUTMS-BMS-TEMPSTRIP-LEFT-V00\QUTMS-BMS-TEMPSTRIP-LEFT-V00.PrjPcb
+Record=SubProject|SourceDocument=BMS-MASTER-SCH.MbsDoc|ProjectPath=..\QUTMS-BMS-TEMPSTRIP-LEFT-V00\QUTMS-BMS-TEMPSTRIP-LEFT-V00.PrjPcb
+Record=DiagramHierarchy|SourceDocument=BMS-MASTER-SCH.MbsDoc|Kind=Multi-board Schematic Module|Designator=5|Source=..\QUTMS-BMS-TEMPSTRIP-RIGHT-V00\QUTMS-BMS-TEMPSTRIP-RIGHT-V00.PrjPcb
+Record=SubProject|SourceDocument=BMS-MASTER-SCH.MbsDoc|ProjectPath=..\QUTMS-BMS-TEMPSTRIP-RIGHT-V00\QUTMS-BMS-TEMPSTRIP-RIGHT-V00.PrjPcb
+Record=DiagramHierarchy|SourceDocument=BMS-MASTER-SCH.MbsDoc|Kind=Multi-board Schematic Module|Designator=2|Source=..\QUTMS-BMS-TEMPSTRIP-RIGHT-V00\QUTMS-BMS-TEMPSTRIP-RIGHT-V00.PrjPcb
+Record=SubProject|SourceDocument=BMS-MASTER-SCH.MbsDoc|ProjectPath=..\QUTMS-BMS-TEMPSTRIP-RIGHT-V00\QUTMS-BMS-TEMPSTRIP-RIGHT-V00.PrjPcb
