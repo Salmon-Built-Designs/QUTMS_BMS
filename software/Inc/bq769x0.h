@@ -92,6 +92,7 @@
 //#define BQ769X0_STATUS_UV 3
 
 #define EINVAL  22
+#define CRC_KEY 7
 
 typedef struct {
   uint16_t uvp; // mV

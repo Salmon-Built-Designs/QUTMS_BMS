@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=/mnt/WORK/QUT/STM32/STM32_workspace/QUTMS_BMS/software/Inc
+HeaderPath=/home/Malora/WORK/QUT/STM32/STM32_workspace/QUTMS_BMS/software/Inc
 HeaderFiles=stm32f0xx_it.h;stm32f0xx_hal_conf.h;main.h;
-SourcePath=/mnt/WORK/QUT/STM32/STM32_workspace/QUTMS_BMS/software/Src
+SourcePath=/home/Malora/WORK/QUT/STM32/STM32_workspace/QUTMS_BMS/software/Src
 SourceFiles=stm32f0xx_it.c;stm32f0xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]

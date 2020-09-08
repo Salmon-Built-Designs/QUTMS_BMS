@@ -330,6 +330,7 @@ HAL_StatusTypeDef bq769x0_reg_read(I2C_HandleTypeDef hi2c,
 	uint8_t result[length * 2];
 	unsigned char CRCInput[2];
 	unsigned char CRCa = 0;
+	unsigned char ReadData[2];
 
 	HAL_StatusTypeDef ret = i2c_burst_read(hi2c, BQ769X0_ADDR, reg, 0, result, length * 2);
 	//HAL_I2C_Master_Receive(&hi2c, BQ769X0_ADDR, result,

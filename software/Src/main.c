@@ -54,8 +54,8 @@ UART_HandleTypeDef huart1;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void PrintI2CStatus(uint8_t status);
 /* USER CODE END PFP */
@@ -102,44 +102,45 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART1_UART_Init();
   MX_I2C1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-    char str[50] ={0};
-    bq769x0_boot(GPIOB, GPIO_PIN_14);
+	char str[50] ={0};
+	bq769x0_boot(GPIOB, GPIO_PIN_14);
 
-    if(bq769x0_configure(hi2c1, bq769x0_config) < 0) {
-		sprintf(buf, "ERROR: BQ Failed to Config.\r\n");
-		HAL_UART_Transmit(&huart1, (uint8_t*)buf,
-					 strlen((char*)buf), HAL_MAX_DELAY);
+	if(bq769x0_configure(hi2c1, bq769x0_config) < 0) {
+		sprintf(msg, "ERROR: BQ Failed to Config.\r\n");
+		HAL_UART_Transmit(&huart1, (uint8_t*)msg,
+					 strlen((char*)msg), HAL_MAX_DELAY);
 	}
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-    // BQ7 main part
+	// BQ7 main part
 	if(bq769x0_read_status(hi2c1, &status) != HAL_OK) {
 		sprintf(msg, "ERROR: Failed get Status\n\r");
-		HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+		HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 					strlen(msg), HAL_MAX_DELAY);
 	} else {
 		sprintf(msg, "CC_Ready: %d;\n\rXReady: %d;\n\rALERT: %d\n\r",
 				status<<BQ769X0_REG_STAT_CC_READY,
 				status<<BQ769X0_REG_STAT_DEVICE_XREADY,
 				status<<BQ769X0_REG_STAT_OVRD_ALERT);
-		HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+		HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 						strlen(msg), HAL_MAX_DELAY);
 		sprintf(msg, "UV: %d;\n\rOV: %d;\n\rSCD: %d\n\rOCD: %d\n\r",
-						status<<BQ769X0_REG_STAT_CC_READY,
-						status<<BQ769X0_REG_STAT_DEVICE_XREADY,
-						status<<BQ769X0_REG_STAT_OVRD_ALERT);
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+						status<<BQ769X0_REG_STAT_UV,
+						status<<BQ769X0_REG_STAT_OV,
+						status<<BQ769X0_REG_STAT_SCD,
+						status<<BQ769X0_REG_STAT_OCD);
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 								strlen(msg), HAL_MAX_DELAY);
 		PrintI2CStatus(status);
 	}
 	if (bq769x0_status_error(status)) {
 		sprintf(msg, "Err: Status\n\r");
-		HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+		HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 					strlen(msg), HAL_MAX_DELAY);
 	}
   while (1)
@@ -147,49 +148,28 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-        sprintf(str, "Single Loop: \n\r");
+		sprintf(str, "Single Loop: \n\r");
 		HAL_UART_Transmit(&huart1, (uint8_t*)str,
 					strlen(str), HAL_MAX_DELAY);
 
 		// Getting Voltage values from BQ Board
 		sprintf(msg, "Cells:\n\r");
-		HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+		HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 					strlen(msg), HAL_MAX_DELAY);
 		for (int i = 0; i < BMS_NUM_CELLS; i++) {
 			if(bq769x0_read_voltage(hi2c1, cells[i],
 					&cell_voltages[i]) != HAL_OK) {
 				sprintf(msg, "Err c%d: voltage\n\r", i);
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 							strlen(msg), HAL_MAX_DELAY);
 			} else {
 				sprintf(msg, "V%d: %hu\n\r", i, cell_voltages[i]);
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 							strlen(msg), HAL_MAX_DELAY);
 			}
 		}
 		sprintf(msg, "\n\r\n\r");
-		HAL_UART_Transmit(&huart2, (uint8_t*)msg,
-					strlen(msg), HAL_MAX_DELAY);
-
-		// Current
-		uint8_t cc_ready = bq769x0_cc_ready(status);
-		if (cc_ready) {
-			//charge += (current / 4); // CC updated every 250ms
-			sprintf(msg, "Current: %hu\n\r", current);
-			HAL_UART_Transmit(&huart2, (uint8_t*)msg,
-						strlen(msg), HAL_MAX_DELAY);
-			if(bq769x0_read_current(hi2c1, &current) != HAL_OK) {
-				sprintf(msg, "Err: Current Read");
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
-						strlen(msg), HAL_MAX_DELAY);
-			}
-		} else {
-			sprintf(msg, "Err Current: %hu\n\r", cc_ready);
-			HAL_UART_Transmit(&huart2, (uint8_t*)msg,
-						strlen(msg), HAL_MAX_DELAY);
-		}
-		sprintf(msg, "=-=-=-=-=-=-=-=-=-\n\r");
-		HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+		HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 					strlen(msg), HAL_MAX_DELAY);
 
 		HAL_Delay(3000);
@@ -223,7 +203,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV8;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
@@ -350,55 +330,55 @@ static void MX_GPIO_Init(void)
 void PrintI2CStatus(uint8_t status){
 	char msg[50];
 	sprintf(msg, "\t\tStatusMessage\n\r");
-	HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+	HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 				strlen(msg), HAL_MAX_DELAY);
 	int i = 0;
 	for (unsigned int mask = 0x80; mask != 0; mask >>= 1) {
 		switch(i){
 			case 0:
 				sprintf(msg, "STAT_OCD:");
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 								strlen(msg), HAL_MAX_DELAY);
 				break;
 			case 1:
 				sprintf(msg, "STAT_SCD:");
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 								strlen(msg), HAL_MAX_DELAY);
 				break;
 			case 2:
 				sprintf(msg, "STAT_OV:");
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 								strlen(msg), HAL_MAX_DELAY);
 				break;
 			case 3:
 				sprintf(msg, "STAT_UV:");
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 								strlen(msg), HAL_MAX_DELAY);
 				break;
 			case 4:
 				sprintf(msg, "STAT_OCRD ALERT:");
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 								strlen(msg), HAL_MAX_DELAY);
 				break;
 			case 5:
 				sprintf(msg, "STAT_DEV_XREADY:");
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 								strlen(msg), HAL_MAX_DELAY);
 				break;
 			case 7:
 				sprintf(msg, "STAT_CC_READY:");
-				HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 								strlen(msg), HAL_MAX_DELAY);
 				break;
 		}
 		i++;
 		if(status & mask) {
 			sprintf(msg, "%d\n\r",1);
-			HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+			HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 							strlen(msg), HAL_MAX_DELAY);
 		} else {
 			sprintf(msg, "%d\n\r",0);
-			HAL_UART_Transmit(&huart2, (uint8_t*)msg,
+			HAL_UART_Transmit(&huart1, (uint8_t*)msg,
 							strlen(msg), HAL_MAX_DELAY);
 		}
 	}
