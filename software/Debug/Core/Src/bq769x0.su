@@ -1,0 +1,5 @@
+bq769x0.c:22:19:bq769x0_reg_write_byte	32	static
+bq769x0.c:33:19:bq769x0_reg_write_bytes	64	static
+bq769x0.c:56:19:bq769x0_reg_read_byte	48	static
+bq769x0.c:68:19:bq769x0_reg_read_bytes	48	static
+bq769x0.c:80:19:bq769x0_read_voltage	40	static
