@@ -1,5 +1,10 @@
-bq769x0.c:22:19:bq769x0_reg_write_byte	32	static
+bq769x0.c:21:19:bq769x0_reg_write_byte	32	static
 bq769x0.c:33:19:bq769x0_reg_write_bytes	64	static
 bq769x0.c:56:19:bq769x0_reg_read_byte	48	static
-bq769x0.c:68:19:bq769x0_reg_read_bytes	48	static
-bq769x0.c:80:19:bq769x0_read_voltage	40	static
+bq769x0.c:70:19:bq769x0_reg_read_bytes	48	static
+bq769x0.c:85:19:bq769x0_read_gain_and_offset	40	static
+bq769x0.c:128:19:bq769x0_read_voltage	40	static
+bq769x0.c:151:19:bq769x0_read_pack_voltage	40	static
+bq769x0.c:183:19:bq769x0_set_under_voltage	24	static
+bq769x0.c:195:19:bq769x0_set_over_voltage	24	static
+bq769x0.c:207:19:bq769x0_set_DSG	32	static

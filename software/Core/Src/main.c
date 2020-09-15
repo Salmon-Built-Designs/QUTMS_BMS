@@ -95,6 +95,9 @@ int main(void) {
 	MX_USART1_UART_Init();
 	/* USER CODE BEGIN 2 */
 
+	uint16_t underVoltage = 27;
+	uint16_t overVoltage = 3700;
+
 	sprintf(msg, "startup.\r\n");
 	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
 			HAL_MAX_DELAY);
@@ -114,7 +117,7 @@ int main(void) {
 				HAL_MAX_DELAY);
 
 		if (sys_stat > 0) {
-			uint8_t clear = sys_stat & 0b00010011;
+			uint8_t clear = sys_stat;// & 0b00010011;
 			// SCD
 			HAL_StatusTypeDef result = bq769x0_reg_write_byte(&hi2c1,
 					BQ_SYS_STAT, clear);
@@ -137,11 +140,33 @@ int main(void) {
 
 	uint8_t gain = 0;
 	uint8_t offset = 0;
-	bq769x0_read_gain_and_offset(&hi2ca, &gain, &offset);
+	bq769x0_read_gain_and_offset(&hi2c1, &gain, &offset);
 
 	sprintf(msg, "gain: %d, offset: %d.\r\n", gain, offset);
 	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
 			HAL_MAX_DELAY);
+
+	/*result = bq769x0_set_under_voltage(&hi2c1, underVoltage);
+	if (result == HAL_OK) {
+	result = bq769x0_set_over_voltage(&hi2c1, overVoltage);
+	}
+	sprintf(msg, "result: %d, under_voltage: %d, over_voltage: %d.\r\n", result, underVoltage, overVoltage);
+		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
+				HAL_MAX_DELAY);
+				*/
+
+	uint8_t dsg_on = 1;
+	result = bq769x0_set_DSG(&hi2c1, dsg_on);
+	sprintf(msg, "result: %d, dsg_on: %d.\r\n", result, dsg_on);
+				HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
+						HAL_MAX_DELAY);
+
+	uint8_t sysctl2reg = 0;
+	result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_CTRL2, &sysctl2reg);
+	sprintf(msg, "result: %d, sys_ctrl2: %d.\r\n", result, sysctl2reg);
+			HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
+					HAL_MAX_DELAY);
+
 
 	/* USER CODE END 2 */
 
@@ -152,10 +177,15 @@ int main(void) {
 
 		/* USER CODE BEGIN 3 */
 
-		uint16_t voltage = 0;
-		HAL_StatusTypeDef volRes = bq769x0_read_voltage(&hi2c1, 7, &voltage);
+		int cell = 7;
 
-		sprintf(msg, "result: %d, voltage: %d.\r\n", volRes, voltage);
+		uint16_t voltage = 0;
+		HAL_StatusTypeDef volRes = bq769x0_read_voltage(&hi2c1, cell, &voltage);
+
+		uint16_t pack_voltage = 0;
+		volRes = bq769x0_read_pack_voltage(&hi2c1, 10, &pack_voltage);
+
+		sprintf(msg, "result: %d, voltage (%d): %d, pack voltage: %d.\r\n", volRes, cell, voltage, pack_voltage);
 		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
 				HAL_MAX_DELAY);
 		idx++;
@@ -210,6 +240,7 @@ void SystemClock_Config(void) {
 }
 
 /* USER CODE BEGIN 4 */
+
 
 /* USER CODE END 4 */
 
