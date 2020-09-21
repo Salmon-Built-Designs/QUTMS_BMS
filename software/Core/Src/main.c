@@ -108,8 +108,15 @@ int main(void)
   MX_CAN_Init();
   /* USER CODE BEGIN 2 */
 
-	uint16_t underVoltage = 27;
-	uint16_t overVoltage = 3700;
+  if (HAL_CAN_Start(&hcan) != HAL_OK)
+    {
+      /* Start Error */
+	  sprintf(msg, "can no start.\r\n");
+	  	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
+	  			HAL_MAX_DELAY);
+      Error_Handler();
+    }
+
 
 	sprintf(msg, "startup.\r\n");
 	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
@@ -159,16 +166,7 @@ int main(void)
 	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
 			HAL_MAX_DELAY);
 
-	/*result = bq769x0_set_under_voltage(&hi2c1, underVoltage);
-	if (result == HAL_OK) {
-	result = bq769x0_set_over_voltage(&hi2c1, overVoltage);
-	}
-	sprintf(msg, "result: %d, under_voltage: %d, over_voltage: %d.\r\n", result, underVoltage, overVoltage);
-		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-				HAL_MAX_DELAY);
-				*/
-
-	uint8_t dsg_on = 0;
+	uint8_t dsg_on = 1;
 	result = bq769x0_set_DSG(&hi2c1, dsg_on);
 	sprintf(msg, "result: %d, dsg_on: %d.\r\n", result, dsg_on);
 				HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
@@ -206,8 +204,8 @@ int main(void)
 		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
 				HAL_MAX_DELAY);
 
-		TxData[0] = vol_low;
-		TxData[1] = vol_high;
+		TxData[0] = 0;//vol_low;
+		TxData[1] = 1;//vol_high;
 		// Request transmisison
 					if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
 							!= HAL_OK) {
@@ -243,8 +241,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI48;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -255,11 +254,11 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -285,7 +284,13 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
+	char msg[20];
+	sprintf(msg, "error.\r\n");
+		  HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
+		  				HAL_MAX_DELAY);
+		  while(1) {
 
+		  }
   /* USER CODE END Error_Handler_Debug */
 }
 
