@@ -65,6 +65,8 @@ void PrintI2CStatus(uint8_t status);
 static uint8_t cells[BMS_NUM_CELLS] = { 0, 1, 2, 4, 5, 6, 7, 8, 9, 10 };
 static uint16_t cell_voltages[BMS_NUM_CELLS];
 
+
+
 /* USER CODE END 0 */
 
 /**
@@ -81,6 +83,8 @@ int main(void)
 	bq769x0_config.uvp = 0;
 
 	uint8_t status = 0;
+
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/

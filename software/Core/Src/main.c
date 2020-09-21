@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "can.h"
 #include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
@@ -49,6 +50,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+CAN_TxHeaderTypeDef TxHeader;
+
+uint8_t TxData[8];
+uint32_t TxMailbox;
 
 /* USER CODE END PV */
 
@@ -64,36 +69,44 @@ void SystemClock_Config(void);
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
-int main(void) {
-	/* USER CODE BEGIN 1 */
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
 	char msg[256];
 
-	/* USER CODE END 1 */
+	TxHeader.ExtId = 0x02;
+	TxHeader.IDE = CAN_ID_EXT;
+	TxHeader.RTR = CAN_RTR_DATA;
+	TxHeader.DLC = 2;
+	TxHeader.TransmitGlobalTime = DISABLE;
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* USER CODE END 1 */
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* USER CODE BEGIN Init */
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE END Init */
+  /* USER CODE BEGIN Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* USER CODE END Init */
 
-	/* USER CODE BEGIN SysInit */
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE END SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_I2C1_Init();
-	MX_USART1_UART_Init();
-	/* USER CODE BEGIN 2 */
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_I2C1_Init();
+  MX_USART1_UART_Init();
+  MX_CAN_Init();
+  /* USER CODE BEGIN 2 */
 
 	uint16_t underVoltage = 27;
 	uint16_t overVoltage = 3700;
@@ -155,7 +168,7 @@ int main(void) {
 				HAL_MAX_DELAY);
 				*/
 
-	uint8_t dsg_on = 1;
+	uint8_t dsg_on = 0;
 	result = bq769x0_set_DSG(&hi2c1, dsg_on);
 	sprintf(msg, "result: %d, dsg_on: %d.\r\n", result, dsg_on);
 				HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
@@ -168,26 +181,43 @@ int main(void) {
 					HAL_MAX_DELAY);
 
 
-	/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1) {
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 
 		int cell = 7;
 
 		uint16_t voltage = 0;
 		HAL_StatusTypeDef volRes = bq769x0_read_voltage(&hi2c1, cell, &voltage);
 
+		uint8_t vol_low = voltage;
+		uint8_t vol_high = voltage >> 8;
+
 		uint16_t pack_voltage = 0;
 		volRes = bq769x0_read_pack_voltage(&hi2c1, 10, &pack_voltage);
 
-		sprintf(msg, "result: %d, voltage (%d): %d, pack voltage: %d.\r\n", volRes, cell, voltage, pack_voltage);
+		sprintf(msg, "result: %d, v_low: %d, v_high: %d, voltage: %d\r\n", volRes, vol_low, vol_high, voltage);
+		//sprintf(msg, "result: %d, voltage (%d): %d, pack voltage: %d.\r\n", volRes, cell, voltage, pack_voltage);
 		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
 				HAL_MAX_DELAY);
+
+		TxData[0] = vol_low;
+		TxData[1] = vol_high;
+		// Request transmisison
+					if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+							!= HAL_OK) {
+						sprintf(msg, "can error\r\n");
+								//sprintf(msg, "result: %d, voltage (%d): %d, pack voltage: %d.\r\n", volRes, cell, voltage, pack_voltage);
+								HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
+										HAL_MAX_DELAY);
+						Error_Handler();
+					}
+
 		idx++;
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
 
@@ -197,46 +227,49 @@ int main(void) {
 
 		HAL_Delay(1000);
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
-void SystemClock_Config(void) {
-	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
-	RCC_PeriphCLKInitTypeDef PeriphClkInit = { 0 };
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
-	/** Initializes the RCC Oscillators according to the specified parameters
-	 * in the RCC_OscInitTypeDef structure.
-	 */
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-		Error_Handler();
-	}
-	/** Initializes the CPU, AHB and APB buses clocks
-	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-			| RCC_CLOCKTYPE_PCLK1;
-	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
-		Error_Handler();
-	}
-	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1
-			| RCC_PERIPHCLK_I2C1;
-	PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
-	PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
-	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
-		Error_Handler();
-	}
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_I2C1;
+  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
+  PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /* USER CODE BEGIN 4 */
@@ -245,14 +278,15 @@ void SystemClock_Config(void) {
 /* USER CODE END 4 */
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void) {
-	/* USER CODE BEGIN Error_Handler_Debug */
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 
-	/* USER CODE END Error_Handler_Debug */
+  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
