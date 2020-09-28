@@ -214,11 +214,107 @@ HAL_StatusTypeDef bq769x0_set_DSG(I2C_HandleTypeDef *hi2c, uint8_t value) {
 	}
 
 	// clear DSG_ON
-	currentReg &= ~(1<<0);
+	currentReg &= ~(1<<1);
 
 	// set DSG VALUE
+	currentReg |= ((1<<1) & value);
+
+	// write back to register
+	return bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL2, currentReg);
+}
+
+HAL_StatusTypeDef bq769x0_set_CHG(I2C_HandleTypeDef *hi2c, uint8_t value) {
+	uint8_t currentReg = 0;
+	HAL_StatusTypeDef result = bq769x0_reg_read_byte(hi2c, BQ_SYS_CTRL2,
+			&currentReg);
+
+	if (result != HAL_OK) {
+		return result;
+	}
+
+	// clear CHG_ON
+	currentReg &= ~(1<<0);
+
+	// set CHG VALUE
 	currentReg |= ((1<<0) & value);
 
 	// write back to register
 	return bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL2, currentReg);
 }
+
+HAL_StatusTypeDef bq769x0_set_CC_mode(I2C_HandleTypeDef *hi2c, uint8_t mode) {
+	uint8_t currentReg = 0;
+	HAL_StatusTypeDef result = bq769x0_reg_read_byte(hi2c, BQ_SYS_CTRL2,
+				&currentReg);
+
+	if (result != HAL_OK) {
+			return result;
+		}
+
+	// clear CC_EN and CC_ONESHOT
+	currentReg &= ~(1<<5);
+	currentReg &= ~(1<<6);
+
+	// set mode
+	if(mode == BQ_CC_ALWAYSON) {
+		currentReg |= 1<<6;
+	}
+	else {
+		currentReg |= 1<<5;
+	}
+
+	// write back to register
+	return bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL2, currentReg);
+}
+
+HAL_StatusTypeDef bq769x0_read_CC(I2C_HandleTypeDef *hi2c, uint16_t *voltage) {
+	uint8_t buffer = 0;
+
+	HAL_StatusTypeDef ret = bq769x0_reg_read_byte(hi2c, BQ_CC_HI, &buffer);
+		if (ret != HAL_OK) {
+			*voltage = 0;
+			return ret;
+		}
+
+	uint16_t adc_value = buffer << 8;
+
+	ret = bq769x0_reg_read_byte(hi2c, BQ_CC_LO, &buffer);
+	if (ret != HAL_OK) {
+		*voltage = 0;
+		return ret;
+	}
+
+	adc_value |= buffer;
+
+	// converting to two`s complement
+	if(adc_value & (1<<15)) {
+		adc_value = (~adc_value + 1) * -1;
+	}
+
+	*voltage = adc_value * 8.44; // (currently in micro-volts)
+
+	return HAL_OK;
+}
+
+
+//Not finished, just need to set BQ_CELLBAL1 as reg1 and BQ_CELLBAL2 as reg2
+
+//HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c,
+//		int cells[], int number_cells2balance) {
+//
+//	uint8_t reg1 = 0;
+//	uint8_t reg2 = 0;
+//
+//	for(int i = 0; i < number_cells2balance; i++) {
+//		if(cells[i] < 6) {
+//			reg1 |= 1<<cells[i];
+//		}
+//		else {
+//			reg2 |= 1<< (cells[i] - 6);
+//		}
+//	}
+//
+//
+//}
+
+

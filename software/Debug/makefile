@@ -30,24 +30,24 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-software.elf \
+QUTMS_BMS.elf \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-software.list \
+QUTMS_BMS.list \
 
 OBJCOPY_BIN += \
-software.bin \
+QUTMS_BMS.bin \
 
 
 # All Target
-all: software.elf secondary-outputs
+all: QUTMS_BMS.elf secondary-outputs
 
 # Tool invocations
-software.elf: $(OBJS) $(USER_OBJS) C:\Users\Motorsports\Desktop\git\QUTMS_BMS\software\STM32F042C6TX_FLASH.ld
-	arm-none-eabi-gcc -o "software.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Users\Motorsports\Desktop\git\QUTMS_BMS\software\STM32F042C6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="software.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+QUTMS_BMS.elf: $(OBJS) $(USER_OBJS) C:\Users\Motorsports\Desktop\git\QUTMS_BMS\software\STM32F042C6TX_FLASH.ld
+	arm-none-eabi-gcc -o "QUTMS_BMS.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Users\Motorsports\Desktop\git\QUTMS_BMS\software\STM32F042C6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="QUTMS_BMS.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -56,13 +56,13 @@ default.size.stdout: $(EXECUTABLES)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-software.list: $(EXECUTABLES)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "software.list"
+QUTMS_BMS.list: $(EXECUTABLES)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "QUTMS_BMS.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-software.bin: $(EXECUTABLES)
-	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "software.bin"
+QUTMS_BMS.bin: $(EXECUTABLES)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "QUTMS_BMS.bin"
 	@echo 'Finished building: $@'
 	@echo ' '
 

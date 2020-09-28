@@ -15,6 +15,7 @@
 
 // registers
 #define BQ_SYS_STAT 0x00
+#define BQ_SYS_CTRL1 0x04
 #define BQ_SYS_CTRL2 0x05
 #define BQ_OV_TRIP 0x09
 #define BQ_UV_TRIP 0x0A
@@ -24,6 +25,12 @@
 #define BQ_ADCOFFSET 0x51
 #define BQ_ADCGAIN1 0x50
 #define BQ_ADCGAIN2 0x59
+#define BQ_CC_ALWAYSON 0x00
+#define BQ_CC_ONESHOT 0x01
+#define BQ_CC_HI 0x32
+#define BQ_CC_LO 0x33
+#define BQ_CELLBAL1 0x01
+#define BQ_CELLBAL2 0x02
 
 // structs
 
@@ -50,6 +57,7 @@ HAL_StatusTypeDef bq769x0_set_under_voltage(I2C_HandleTypeDef *hi2c, uint16_t un
 HAL_StatusTypeDef bq769x0_set_over_voltage(I2C_HandleTypeDef *hi2c, uint16_t over_voltage);
 
 HAL_StatusTypeDef bq769x0_set_DSG(I2C_HandleTypeDef *hi2c, uint8_t value);
+HAL_StatusTypeDef bq769x0_set_CHG(I2C_HandleTypeDef *hi2c, uint8_t value);
 
 
 #endif /* INC_BQ769X0_H_ */
