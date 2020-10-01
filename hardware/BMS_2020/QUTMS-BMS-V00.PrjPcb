@@ -1,4 +1,4 @@
-[Design]
+﻿[Design]
 Version=1.0
 HierarchyMode=0
 ChannelRoomNamingStyle=0
@@ -1058,95 +1058,19 @@ GenerateClassCluster=0
 DocumentUniqueId=
 
 [GeneratedDocument1]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.DRR
-DItemRevisionGUID=
-
-[GeneratedDocument2]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.EXTREP
-DItemRevisionGUID=
-
-[GeneratedDocument3]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GBL
-DItemRevisionGUID=
-
-[GeneratedDocument4]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GBO
-DItemRevisionGUID=
-
-[GeneratedDocument5]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GBP
-DItemRevisionGUID=
-
-[GeneratedDocument6]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GBS
-DItemRevisionGUID=
-
-[GeneratedDocument7]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GKO
-DItemRevisionGUID=
-
-[GeneratedDocument8]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GM1
-DItemRevisionGUID=
-
-[GeneratedDocument9]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GPB
-DItemRevisionGUID=
-
-[GeneratedDocument10]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GPT
-DItemRevisionGUID=
-
-[GeneratedDocument11]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GTL
-DItemRevisionGUID=
-
-[GeneratedDocument12]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GTO
-DItemRevisionGUID=
-
-[GeneratedDocument13]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GTP
-DItemRevisionGUID=
-
-[GeneratedDocument14]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.GTS
-DItemRevisionGUID=
-
-[GeneratedDocument15]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.LDP
-DItemRevisionGUID=
-
-[GeneratedDocument16]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.REP
-DItemRevisionGUID=
-
-[GeneratedDocument17]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.RUL
-DItemRevisionGUID=
-
-[GeneratedDocument18]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\BMS-P00-V00.TXT
-DItemRevisionGUID=
-
-[GeneratedDocument19]
 DocumentPath=CellMonitor.cmp
 DItemRevisionGUID=
 
-[GeneratedDocument20]
+[GeneratedDocument2]
 DocumentPath=CellMonitor.csv
 DItemRevisionGUID=
 
-[GeneratedDocument21]
+[GeneratedDocument3]
 DocumentPath=CellMonitor.doc
 DItemRevisionGUID=
 
-[GeneratedDocument22]
+[GeneratedDocument4]
 DocumentPath=CellMonitor.rep
-DItemRevisionGUID=
-
-[GeneratedDocument23]
-DocumentPath=Project Outputs for QUTMS-BMS-V00\Design Rule Check - BMS-P00-V00.html
 DItemRevisionGUID=
 
 [Configuration1]
@@ -1307,7 +1231,7 @@ OutputDefault20=0
 [OutputGroup2]
 Name=Simulator Outputs
 Description=
-TargetPrinter=Microsoft Print to PDF
+TargetPrinter=\\SEF-PRINT.qut.edu.au\SEF-S8-5
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintJobKind=1|PrintWhat=1
 
 [OutputGroup3]
