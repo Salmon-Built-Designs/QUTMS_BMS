@@ -299,22 +299,49 @@ HAL_StatusTypeDef bq769x0_read_CC(I2C_HandleTypeDef *hi2c, uint16_t *voltage) {
 
 //Not finished, just need to set BQ_CELLBAL1 as reg1 and BQ_CELLBAL2 as reg2
 
-//HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c,
-//		int cells[], int number_cells2balance) {
-//
-//	uint8_t reg1 = 0;
-//	uint8_t reg2 = 0;
-//
-//	for(int i = 0; i < number_cells2balance; i++) {
-//		if(cells[i] < 6) {
-//			reg1 |= 1<<cells[i];
-//		}
-//		else {
-//			reg2 |= 1<< (cells[i] - 6);
-//		}
-//	}
-//
-//
-//}
+/**
+ * cell_num - 0-9
+ *
+ */
+HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c,
+		uint8_t cell_num, uint8_t state) {
+
+	state = state & 1;
+	uint8_t reg = 0;
+	uint8_t bit_num;
+
+	if (cell_num < 5) {
+		reg = BQ_CELLBAL1;
+		bit_num = cell_num;
+	} else if (cell_num < 10) {
+		reg = BQ_CELLBAL2;
+		bit_num = cell_num - 5;
+	}
+
+	uint8_t cur_value = 0;
+	HAL_StatusTypeDef res = bq769x0_reg_read_byte(hi2c, reg, &cur_value);
+
+	if (res != HAL_OK) {
+		return res;
+	}
+
+	// clear current value
+	cur_value = cur_value & ~(1<<bit_num);
+
+	// set bit
+	cur_value = cur_value | (state << bit_num);
+
+	res = bq769x0_reg_write_byte(hi2c, reg, cur_value);
+
+	return res;
+}
+
+HAL_StatusTypeDef bq769x0_reset_cell_balancing(I2C_HandleTypeDef *hi2c) {
+	HAL_StatusTypeDef res = bq769x0_reg_write_byte(hi2c, BQ_CELLBAL1, 0);
+	res = bq769x0_reg_write_byte(hi2c, BQ_CELLBAL2, 0);
+
+	return res;
+
+}
 
 
