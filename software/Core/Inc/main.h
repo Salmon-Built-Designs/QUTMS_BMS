@@ -58,6 +58,35 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define TEMP2_Pin GPIO_PIN_3
+#define TEMP2_GPIO_Port GPIOA
+#define TEMP2_EXTI_IRQn EXTI2_3_IRQn
+#define TEMP_SOC_Pin GPIO_PIN_4
+#define TEMP_SOC_GPIO_Port GPIOA
+#define BMS_ALARM_OUT_Pin GPIO_PIN_5
+#define BMS_ALARM_OUT_GPIO_Port GPIOA
+#define BMS_ID_0_Pin GPIO_PIN_0
+#define BMS_ID_0_GPIO_Port GPIOB
+#define BMS_ID_1_Pin GPIO_PIN_1
+#define BMS_ID_1_GPIO_Port GPIOB
+#define BMS_ID_2_Pin GPIO_PIN_2
+#define BMS_ID_2_GPIO_Port GPIOB
+#define BMS_ID_3_Pin GPIO_PIN_10
+#define BMS_ID_3_GPIO_Port GPIOB
+#define BQ_ALERT_Pin GPIO_PIN_11
+#define BQ_ALERT_GPIO_Port GPIOB
+#define LED0_Pin GPIO_PIN_14
+#define LED0_GPIO_Port GPIOB
+#define LED1_Pin GPIO_PIN_15
+#define LED1_GPIO_Port GPIOB
+#define TEMP1_Pin GPIO_PIN_15
+#define TEMP1_GPIO_Port GPIOA
+#define TEMP3_Pin GPIO_PIN_3
+#define TEMP3_GPIO_Port GPIOB
+#define TEMP4_Pin GPIO_PIN_4
+#define TEMP4_GPIO_Port GPIOB
+#define TEMP5_Pin GPIO_PIN_5
+#define TEMP5_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
