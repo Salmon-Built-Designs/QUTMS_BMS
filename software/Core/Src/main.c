@@ -111,6 +111,12 @@ int main(void)
 
   // this is where we put spicy pre-RTOS tasks
 
+  // check for BQ faults
+
+  // enable BQ DSG_ON
+
+  // Check status pin TODO: confirm with sam
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
