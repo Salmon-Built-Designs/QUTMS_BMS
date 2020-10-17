@@ -31,6 +31,7 @@
 #include <stdio.h>
 
 #include "bq769x0.h"
+#include "QUTMS_can.h"
 
 /* USER CODE END Includes */
 
@@ -108,13 +109,7 @@ int main(void)
   MX_CAN_Init();
   /* USER CODE BEGIN 2 */
 
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
-
-	HAL_Delay(1000);
-
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
-
-	HAL_Delay(1000);
+  // this is where we put spicy pre-RTOS tasks
 
   /* USER CODE END 2 */
 
@@ -136,7 +131,6 @@ int main(void)
 
 	} else {
 
-
 		if (sys_stat > 0) {
 			uint8_t clear = sys_stat;// & 0b00010011;
 			// SCD
@@ -145,94 +139,10 @@ int main(void)
 		}
 	}
 
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
-	if (result != HAL_OK) {
-
-	} else {
-
-	}
-
-	uint8_t dsg_on = 1;
-	result = bq769x0_set_DSG(&hi2c1, dsg_on);
-
-
-	uint8_t sysctl2reg = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_CTRL2, &sysctl2reg);
-
-
-	// TEST CELL BALANCING
-
-
-	bq769x0_reset_cell_balancing(&hi2c1);
-
-	uint8_t balReg1 = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL1,	&balReg1);
-
-	uint8_t balReg2 = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL2,	&balReg2);
-
-
-	uint8_t cell_num = 3;
-
-	uint16_t voltage_read = 0;
-
-	for (int i = 0; i < 10; i++) {
-		voltage_read = 0;
-		result = bq769x0_read_voltage(&hi2c1, i, &voltage_read);
-
-	}
-
-	HAL_Delay(1000);
-
-	balReg1 = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL1,	&balReg1);
-
-	balReg2 = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL2,	&balReg2);
-
-
-	result = bq769x0_set_cell_balancing(&hi2c1, cell_num, 1);
-
-
-	balReg1 = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL1,	&balReg1);
-
-	balReg2 = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL2,	&balReg2);
-
-	HAL_Delay(1000);
-
-	uint16_t vAfter = 0;
-	for (int i = 0; i < 10; i++) {
-			voltage_read = 0;
-			result = bq769x0_read_voltage(&hi2c1, i, &voltage_read);
-
-		}
-
-	HAL_Delay(1000);
-
-	balReg1 = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL1,	&balReg1);
-
-	balReg2 = 0;
-	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL2,	&balReg2);
-
-
-	HAL_Delay(1000);
-
-
 	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
-
-		HAL_Delay(1000);
-
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
-
-		HAL_Delay(1000);
 	}
   /* USER CODE END 3 */
 }
