@@ -58,6 +58,36 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define BQtest_CONST 1
+#define TEMP2_Pin GPIO_PIN_3
+#define TEMP2_GPIO_Port GPIOA
+#define TEMP_SOC_Pin GPIO_PIN_4
+#define TEMP_SOC_GPIO_Port GPIOA
+#define nALARM_Out_Pin GPIO_PIN_5
+#define nALARM_Out_GPIO_Port GPIOA
+#define ID1_Pin GPIO_PIN_0
+#define ID1_GPIO_Port GPIOB
+#define ID2_Pin GPIO_PIN_1
+#define ID2_GPIO_Port GPIOB
+#define ID3_Pin GPIO_PIN_2
+#define ID3_GPIO_Port GPIOB
+#define ID4_Pin GPIO_PIN_10
+#define ID4_GPIO_Port GPIOB
+#define cALARM_EXTI11_Pin GPIO_PIN_11
+#define cALARM_EXTI11_GPIO_Port GPIOB
+#define cALARM_EXTI11_EXTI_IRQn EXTI4_15_IRQn
+#define LED0_Pin GPIO_PIN_14
+#define LED0_GPIO_Port GPIOB
+#define LED1_Pin GPIO_PIN_15
+#define LED1_GPIO_Port GPIOB
+#define TEMP1_Pin GPIO_PIN_15
+#define TEMP1_GPIO_Port GPIOA
+#define TEMP3_Pin GPIO_PIN_3
+#define TEMP3_GPIO_Port GPIOB
+#define TEMP4_Pin GPIO_PIN_4
+#define TEMP4_GPIO_Port GPIOB
+#define TEMP5_Pin GPIO_PIN_5
+#define TEMP5_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
