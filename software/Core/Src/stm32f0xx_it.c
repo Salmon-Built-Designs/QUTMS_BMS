@@ -42,6 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+int tempsegment = 0;
 
 /* USER CODE END PV */
 
@@ -160,6 +161,31 @@ void EXTI4_15_IRQHandler(void)
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
+//	if (tempsegment == 0) {
+//		__HAL_TIM_SET_COUNTER(&htim1,0);
+//	} else if (tempsegment == 1) {
+//		temp_high0 = (__HAL_TIM_GET_COUNTER(&htim1)); //Convert to integer
+//		__HAL_TIM_SET_COUNTER(&htim2,0);
+//	} else if (tempsegment == 2) {
+//		temp_low0 = (__HAL_TIM_GET_COUNTER(&htim2)); //Convert to integer
+//		__HAL_TIM_SET_COUNTER(&htim1,0);
+//	} else if (tempsegment == 3) {
+//		temp_high1 = (__HAL_TIM_GET_COUNTER(&htim1));
+//		__HAL_TIM_SET_COUNTER(&htim2,0);
+//	} else if (tempsegment == 4) {
+//		temp_low1 = (__HAL_TIM_GET_COUNTER(&htim2));
+//		__HAL_TIM_SET_COUNTER(&htim1,0);
+//	} else if (tempsegment == 5) {
+//		temp_high2 = (__HAL_TIM_GET_COUNTER(&htim1));
+//		__HAL_TIM_SET_COUNTER(&htim2,0);
+//	} else if (tempsegment == 6) {
+//		temp_low2 = (__HAL_TIM_GET_COUNTER(&htim2));
+//		__HAL_TIM_SET_COUNTER(&htim2,0);
+//	} else if (tempsegment == 7) {
+//		temp_high3 = (__HAL_TIM_GET_COUNTER(&htim1));
+//		__HAL_TIM_SET_COUNTER(&htim2,0);
+//	}
+	tempsegment++;
 
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);

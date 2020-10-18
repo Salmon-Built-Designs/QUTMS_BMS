@@ -149,3 +149,33 @@ Default Off state - HIGH.
 
 ## Seting unused pins as analog - ENABLED.
 !!! Determine how much power in actually optimizes.
+
+## Following psudocode outlines the procedure.
+
+    Power the MCU;
+    Initialize clock at lowest frequency (currently 1MHz);
+    while(ShipMod) remain here;
+    Set Clock to 8MHz;
+    Initialize HAL peripherals;    
+    Define Local private variables;
+    Enable Timer 1 and 3 interupt.
+    ...
+    Read status of BQ controller.
+    ?? Test TMPs (send a pulse signal, if all lines trigger high - they safe)
+    Determine ID of the board, store as CAN ExtID.
+
+    Infinite loop {
+        Set LED0 HIGH
+        for every available cell {
+            Read & store single voltage
+            Set LED1 HIGH
+            Capture all TMPS and accumulate 
+            Set LED1 LOW
+            Transmit Voltage reading.
+        }
+        Set LED0 LOW
+        Tranmit and Average all TMPs
+        Tranmit and Calculate Total Voltage
+        ...
+    }
+

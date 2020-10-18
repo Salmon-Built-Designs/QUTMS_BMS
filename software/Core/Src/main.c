@@ -30,6 +30,7 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "bq769x0.h"
 
@@ -37,11 +38,18 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+struct TMP05 {
+	float TEMP1[4];
+	float TEMP2[4];
+	float TEMP3[3];
+	float TEMP4[4];
+	float TEMP5[4];
+};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define N_CELLS	10
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -58,12 +66,22 @@ CAN_TxHeaderTypeDef TxHeader;
 
 uint8_t TxData[8];
 
+uint16_t voltage_read[N_CELLS] = {0};
+
+volatile struct TMP05 TMP05_Readings;
+extern int tempsegment;
+long int temp_high0, temp_low0;		// Figure out replacement. struct in struct.
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void SystemClock_8MHz_Config(void);
+void delay_us (uint16_t us);
+
+void send_Pulse(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+float TMP05_PeriodsToTMPs(long int high, long int low);
+
 char *FloatToStr(float x);
 void bq769x0_PrintStatusRegister(uint8_t stat);
 /* USER CODE END PFP */
@@ -96,6 +114,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+  	// SystemClock_8MHz_Config();	// Uncomment to skip shipment.
     MX_USART1_UART_Init();
     sprintf(msgBuffer, "DEBUG: Waiting Exit From ShipMod");
 	if(HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
@@ -119,11 +138,16 @@ int main(void)
     HAL_StatusTypeDef BQ_result = HAL_BUSY;
 
 	// Initialize CAN BUS ID
-    TxHeader.ExtId = 0x02;
+    TxHeader.ExtId = 0x02;	//TODO: Get ID from pins
 	TxHeader.IDE = CAN_ID_EXT;
 	TxHeader.RTR = CAN_RTR_DATA;
 	TxHeader.DLC = 2;
 	TxHeader.TransmitGlobalTime = DISABLE;
+
+	// Start the us Timer. Hold enabling TIM3
+	HAL_TIM_Base_Start(&htim1);
+	//HAL_TIM_Base_Start(&htim3);
+	HAL_Delay(1);
 
 	sprintf(msgBuffer, "DEBUG: BQ, CAN, TMP set.\r\n");
 	if(HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
@@ -149,6 +173,7 @@ int main(void)
 		// DEBUG: Print Sys stat register
 		bq769x0_PrintStatusRegister(sys_stat);
 
+		// Clear SYS STAT to allow
 		if (sys_stat > 0) {
 			uint8_t clear = sys_stat;// & 0b00010011;
 			// SCD
@@ -160,139 +185,64 @@ int main(void)
 		}
 	}
 
-//	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
-//	if (BQ_result != HAL_OK) {
-//		sprintf(msg, "error reading sys_stat.\r\n");
-//		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//				HAL_MAX_DELAY);
-//	} else {
-//		sprintf(msg, "sys_stat: %d\r\n", sys_stat);
-//		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//				HAL_MAX_DELAY);
-//	}
-//
-//	uint8_t dsg_on = 1;
-//	BQ_result = bq769x0_set_DSG(&hi2c1, dsg_on);
-//	sprintf(msg, "result: %d, dsg_on: %d.\r\n", result, dsg_on);
-//	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//			HAL_MAX_DELAY);
-//
-//	uint8_t sysctl2reg = 0;
-//	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_CTRL2, &sysctl2reg);
-//	sprintf(msg, "result: %d, sys_ctrl2: %d.\r\n", result, sysctl2reg);
-//	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//			HAL_MAX_DELAY);
-//
-//	// TEST CELL BALANCING
-//
-//	sprintf(msg, "TEST.\r\n");
-//	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//			HAL_MAX_DELAY);
-//
-//	bq769x0_reset_cell_balancing(&hi2c1);
-//
-//	uint8_t balReg1 = 0;
-//	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL1,	&balReg1);
-//
-//	uint8_t balReg2 = 0;
-//	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL2,	&balReg2);
-//
-//	sprintf(msg, "res: %d, reg: %d %d.\r\n", BQ_result, balReg1, balReg2);
-//	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//			HAL_MAX_DELAY);
-//
-//	uint8_t cell_num = 3;
-//
-//	uint16_t voltage_read = 0;
-//
-//	for (int i = 0; i < 10; i++) {
-//		voltage_read = 0;
-//		BQ_result = bq769x0_read_voltage(&hi2c1, i, &voltage_read);
-//
-//		sprintf(msg, "r: %d, c: %d vp: %d.\r\n", BQ_result, i, voltage_read);
-//		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//				HAL_MAX_DELAY);
-//	}
-//
-//	HAL_Delay(1000);
-//
-//	balReg1 = 0;
-//	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL1,	&balReg1);
-//
-//	balReg2 = 0;
-//	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL2,	&balReg2);
-//
-//	sprintf(msg, "res: %d, reg: %d %d.\r\n", BQ_result, balReg1, balReg2);
-//	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//			HAL_MAX_DELAY);
-//
-//	result = bq769x0_set_cell_balancing(&hi2c1, cell_num, 1);
-//	sprintf(msg, "res: %d, enable bal.\r\n", result);
-//	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//			HAL_MAX_DELAY);
-//
-//	balReg1 = 0;
-//	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL1,	&balReg1);
-//
-//	balReg2 = 0;
-//	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL2,	&balReg2);
-//
-//	sprintf(msg, "res: %d, reg: %d %d.\r\n", result, balReg1, balReg2);
-//	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//			HAL_MAX_DELAY);
-//
-//	HAL_Delay(1000);
-//
-//	uint16_t vAfter = 0;
-//	for (int i = 0; i < 10; i++) {
-//			voltage_read = 0;
-//			result = bq769x0_read_voltage(&hi2c1, i, &voltage_read);
-//
-//			sprintf(msg, "r: %d, c: %d vp: %d.\r\n", result, i, voltage_read);
-//			HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//					HAL_MAX_DELAY);
-//		}
-//
-//	HAL_Delay(1000);
-//
-//	balReg1 = 0;
-//	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL1,	&balReg1);
-//
-//	balReg2 = 0;
-//	result = bq769x0_reg_read_byte(&hi2c1, BQ_CELLBAL2,	&balReg2);
-//
-//	sprintf(msg, "res: %d, reg: %d %d.\r\n", result, balReg1, balReg2);
-//	HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//			HAL_MAX_DELAY);
-//
-//	HAL_Delay(1000);
-
-//	result = bq769x0_set_cell_balancing(&hi2c1, cell_num, 0);
-//		sprintf(msg, "res: %d, disable bal.\r\n", result);
-//		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//				HAL_MAX_DELAY);
-//
-//		HAL_Delay(1000);
-//
-//		vAfter = 0;
-//		result = bq769x0_read_voltage(&hi2c1, 7,	&vAfter);
-//
-//		sprintf(msg, "res: %d, v after: %d.\r\n", result, vAfter);
-//		HAL_UART_Transmit(&huart1, (uint8_t*) msg, strlen((char*) msg),
-//				HAL_MAX_DELAY);
-
 	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_RESET);
+		for (int i = 0; i < N_CELLS; i++) {
 
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+			// Start by reading Voltage of 1 cell
+			BQ_result = bq769x0_read_voltage(&hi2c1, i, &voltage_read[i]);
+			if (BQ_result != HAL_OK) {
+				sprintf(msgBuffer, "ERROR: Voltage %d Unsuccessful.\r\n", i);
+				HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
+						HAL_MAX_DELAY);
+			} else {
+				// Perform temperature readings.
+				HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_RESET);
+				HAL_TIM_Base_Start(&htim3);			// Figure out if necessary to
+				//HAL_TIM_Base_Start_IT(&htim3);	//starts interrupt.
 
-		HAL_Delay(1000);
+				tempsegment = 0;
+				send_Pulse(GPIOA, GPIO_PIN_1);
+				//TODO: This is a place for Watch DoG timer.
+				while(tempsegment < 7) {}		// 2 Sensors took 4(5) iterations; 3 Sensors 6(7)
 
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+				//TODO: Incorrect assignment. Fix later
+				TMP05_Readings.TEMP1[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
+				TMP05_Readings.TEMP2[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
+				TMP05_Readings.TEMP3[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
+				TMP05_Readings.TEMP4[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
+				TMP05_Readings.TEMP5[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
 
-		HAL_Delay(1000);
+				HAL_TIM_Base_Stop(&htim3);
+				//HAL_TIM_Base_Stop_IT(&htim3);
+				HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_SET);
+			}
+
+			// Transmit one voltage over CAN-bus
+			sprintf(msgBuffer, "Voltage %d: %d.\r\n", i, voltage_read[i]);
+			HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer,
+					strlen((char*) msgBuffer), HAL_MAX_DELAY);
+		}
+		HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_SET);
+
+		int i = 0;
+		sprintf(msgBuffer, "Temp1: %s C ::: Temp2: %s C ::: Temp3: %s "
+				"::: Temp4: %s C ::: Temp5: %s  C.\n",
+				FloatToStr(TMP05_Readings.TEMP1[i]/N_CELLS),
+				FloatToStr(TMP05_Readings.TEMP2[i]/N_CELLS),
+				FloatToStr(TMP05_Readings.TEMP3[i]/N_CELLS),
+				FloatToStr(TMP05_Readings.TEMP4[i]/N_CELLS),
+				FloatToStr(TMP05_Readings.TEMP5[i]/N_CELLS)
+				);
+
+		HAL_UART_Transmit(&huart1, (uint8_t*)msgBuffer,
+					 strlen((char*)msgBuffer), HAL_MAX_DELAY);
+
+		//TODO: Continue with decision on Balancing.
+
 	}
   /* USER CODE END 3 */
 }
@@ -377,17 +327,41 @@ void SystemClock_8MHz_Config(void) {
 		Error_Handler();
 	}
 }
+/*
+ * Microseconds delay. With 48MHz  - 1MHz.
+ */
+void delay_us (uint16_t us) {
+	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
+	while (__HAL_TIM_GET_COUNTER(&htim1) < us);  // wait for the counter to reach the us input in the parameter
+}
+
+/*
+ * Datasheet claims that in daisy chain the pulse have to be from Low to High.
+ * Withing time 20nS > delay > 25us.
+ */
+void send_Pulse(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin) {
+	// Send Pulse
+	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_SET);
+	delay_us(2);
+	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_RESET);
+}
+
+/*
+ * Converts periods of ADC into Celsius values. In what time value?
+ */
+float TMP05_PeriodsToTMPs(long int high, long int low) {
+	return 421-(751*((((float)high)/1000)/(((float)low)/1000)));
+}
 
 /*
  * Inhereted from Atmega controllers.
  * Converts float reading to String, which later can be send
  * through UART.
  *
- * @param - x any floating number, either negative or positive
- * @return - Same float as a string.
+ * @param 	- x any floating number, either negative or positive
+ * @return	- Same float as a string.
  */
 char *FloatToStr(float x) {
-	char floatStr[6];
 	char *tmpSign = (x < 0) ? "-" : "";
 	float tmpVal = (x < 0) ? -x : x;
 
@@ -395,11 +369,18 @@ char *FloatToStr(float x) {
 	float tmpFrac = tmpVal - tmpInt1;      // Get fraction (0.0123).
 	int tmpInt2 = trunc(tmpFrac * 10000);  // Turn into integer (123).
 
-	sprintf (floatStr, "%s%d.%04d\n", tmpSign, tmpInt1, tmpInt2);
+	sprintf (msgBuffer, "%s%d.%04d\n", tmpSign, tmpInt1, tmpInt2);
 
-	return floatStr;
+	return msgBuffer;
 }
 
+/*
+ * Similar to MAX14920 helps to visualise Values of the register with references.
+ * Uses a Masking approach to get each bit of 8bit variables and prints as a
+ * string over HAL.
+ *
+ * @param	- stat unsigned 8 bit variable
+ */
 void bq769x0_PrintStatusRegister(uint8_t stat) {
 	sprintf(msgBuffer, "\n\n\r ||||||||||||||||||||||||||\n SYS_STAT: ");
 	HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
