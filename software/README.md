@@ -147,5 +147,5 @@ Default Off state - HIGH.
     HAL id                      - huart1
     Message char buffer size    - 256
 
-## Seting unused pins as analog - DISABLED.
+## Seting unused pins as analog - ENABLED.
 !!! Determine how much power in actually optimizes.
