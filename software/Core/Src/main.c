@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "can.h"
 #include "i2c.h"
 #include "usart.h"
@@ -61,7 +60,6 @@ uint32_t TxMailbox;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -119,29 +117,20 @@ int main(void)
 
   /* USER CODE END 2 */
 
-  /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
-  MX_FREERTOS_Init();
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	int idx = 0;
 	uint8_t sys_stat = 0;
-	HAL_StatusTypeDef result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT,
-			&sys_stat);
 
-	if (result != HAL_OK) {
+
+	if (0) {
 
 	} else {
 
 		if (sys_stat > 0) {
 			uint8_t clear = sys_stat;// & 0b00010011;
 			// SCD
-			HAL_StatusTypeDef result = bq769x0_reg_write_byte(&hi2c1,
-					BQ_SYS_STAT, clear);
+
 		}
 	}
 
