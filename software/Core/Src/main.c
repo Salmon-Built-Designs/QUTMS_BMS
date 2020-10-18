@@ -38,13 +38,14 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-struct TMP05 {
+struct TMP {
 	float TEMP1[4];
 	float TEMP2[4];
 	float TEMP3[3];
 	float TEMP4[4];
 	float TEMP5[4];
 };
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -62,13 +63,15 @@ struct TMP05 {
 /* USER CODE BEGIN PV */
 char msgBuffer[256];
 
-CAN_TxHeaderTypeDef TxHeader;
-
-uint8_t TxData[8];
+CAN_TxHeaderTypeDef 	TxHeader;
+uint8_t					TxData[8];
+uint32_t 				TxMailbox;
 
 uint16_t voltage_read[N_CELLS] = {0};
+uint16_t overalVoltage = 0;
 
-volatile struct TMP05 TMP05_Readings;
+volatile struct TMP TMP05_Readings;
+
 extern int tempsegment;
 long int temp_high0, temp_low0;		// Figure out replacement. struct in struct.
 /* USER CODE END PV */
@@ -84,6 +87,8 @@ float TMP05_PeriodsToTMPs(long int high, long int low);
 
 char *FloatToStr(float x);
 void bq769x0_PrintStatusRegister(uint8_t stat);
+
+uint16_t GetHardwareID();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -127,7 +132,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
-  //MX_USART1_UART_Init();
+  MX_USART1_UART_Init();
   MX_CAN_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
@@ -138,11 +143,8 @@ int main(void)
     HAL_StatusTypeDef BQ_result = HAL_BUSY;
 
 	// Initialize CAN BUS ID
-    TxHeader.ExtId = 0x02;	//TODO: Get ID from pins
-	TxHeader.IDE = CAN_ID_EXT;
-	TxHeader.RTR = CAN_RTR_DATA;
-	TxHeader.DLC = 2;
-	TxHeader.TransmitGlobalTime = DISABLE;
+    //TODO: Determine ID from switch positions.
+    Configurate_CAN(&hcan, &TxHeader, GetHardwareID());
 
 	// Start the us Timer. Hold enabling TIM3
 	HAL_TIM_Base_Start(&htim1);
@@ -185,6 +187,7 @@ int main(void)
 		}
 	}
 
+
 	while (1) {
     /* USER CODE END WHILE */
 
@@ -206,8 +209,10 @@ int main(void)
 
 				tempsegment = 0;
 				send_Pulse(GPIOA, GPIO_PIN_1);
-				//TODO: This is a place for Watch DoG timer.
+
 				while(tempsegment < 7) {}		// 2 Sensors took 4(5) iterations; 3 Sensors 6(7)
+				// With WatchDoG timer, this part will not cause deadlock condition
+				HAL_WWDG_Refresh(&hwwdg);
 
 				//TODO: Incorrect assignment. Fix later
 				TMP05_Readings.TEMP1[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
@@ -225,9 +230,17 @@ int main(void)
 			sprintf(msgBuffer, "Voltage %d: %d.\r\n", i, voltage_read[i]);
 			HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer,
 					strlen((char*) msgBuffer), HAL_MAX_DELAY);
+
+			// Transmit Voltage over CAN
+			TxData[0] = i;
+			TxData[1] = (uint8_t) voltage_read[i];
+			if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						  != HAL_OK) Error_Handler();
+
 		}
 		HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_SET);
 
+		// Calculate TMPs and transmit as strings
 		int i = 0;
 		sprintf(msgBuffer, "Temp1: %s C ::: Temp2: %s C ::: Temp3: %s "
 				"::: Temp4: %s C ::: Temp5: %s  C.\n",
@@ -241,8 +254,32 @@ int main(void)
 		HAL_UART_Transmit(&huart1, (uint8_t*)msgBuffer,
 					 strlen((char*)msgBuffer), HAL_MAX_DELAY);
 
-		//TODO: Continue with decision on Balancing.
+		// Transmit over CAN bus.
+		TxData[0] = 255;
+		TxData[1] = (uint8_t) TMP05_Readings.TEMP1[i]/N_CELLS;
+		TxData[2] = (uint8_t) TMP05_Readings.TEMP2[i]/N_CELLS;
+		TxData[3] = (uint8_t) TMP05_Readings.TEMP3[i]/N_CELLS;
+		TxData[4] = (uint8_t) TMP05_Readings.TEMP4[i]/N_CELLS;
+		TxData[5] = (uint8_t) TMP05_Readings.TEMP5[i]/N_CELLS;
+		if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+					  != HAL_OK) Error_Handler();
 
+		// Transmit Overal Voltage. Either obtain it if posible, or sum it
+		for(int i = 0; i < N_CELLS; i++) overalVoltage += voltage_read[i];
+
+		TxData[0] = 125;
+		TxData[1] = (uint8_t) overalVoltage;
+		if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+					  != HAL_OK) Error_Handler();
+
+		//TODO: Continue with decision on Balancing.
+		// Transmit status of the balancing
+		TxData[0] = 100;
+		TxData[1] = 0b11111111;
+		TxData[1] = 0b11000000;
+
+		if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+					  != HAL_OK) Error_Handler();
 	}
   /* USER CODE END 3 */
 }
@@ -314,7 +351,7 @@ void SystemClock_8MHz_Config(void) {
 	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
 							  |RCC_CLOCKTYPE_PCLK1;		    // (0x00000002U)|(0x00000001U)|(0x00000004U)
 	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;	// (0x00000000U)
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;		// (0x00000000U)
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;		// (0x00000000U) //DIVIDER is primary diff
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;		// (0x00000000U)
 
 	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {	// {struct}, (0x00000000U)
@@ -424,6 +461,14 @@ void bq769x0_PrintStatusRegister(uint8_t stat) {
 		i++;
 	}
 
+}
+
+/*
+ * Return the ID set but Hardware.
+ * TODO: Requires usage of all pins.
+ */
+uint16_t GetHardwareID() {
+	return (HAL_GPIO_ReadPin(GPIOB, ID1_Pin));
 }
 /* USER CODE END 4 */
 

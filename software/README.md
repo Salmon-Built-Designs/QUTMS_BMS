@@ -20,6 +20,10 @@ I^2C Communication at Standard Mode with 100KHz. No CRC.
     PB11    <------ CELL ALERT (EXTI11 NVIC interupt on Rising edge)
     The CRC polynomial is x8 + x2 + x + 1, and the initialvalue is 0.
 
+ADC sampler for voltage reading tend to be inperfect. Based on each break ID
+a separate table has to be created to accumulate offset from multimeter
+reading.
+
 
 ### TMP05 - Digital Temperature Sensor
 4 Temperature Line with 4-5 Daisy Chained Sensors.
@@ -75,7 +79,7 @@ board. Protocol and package outlines:
 
         Receive Fifo Locked Mode        Enable
 
-    CAN Software.
+    CAN Software & Filter.
         	TxHeader.ExtId = board physical ID;
             TxHeader.IDE = CAN_ID_EXT;
             TxHeader.RTR = CAN_RTR_DATA;
@@ -95,6 +99,10 @@ Windowd approach.
         Free-running Down Counter   - 64
 
         Early WakeUp interupt       Disabled
+The refresh function to reset the timer has been placed after temperature
+reading completed. If, by some accident,some tempsegment will be skipped, 
+board will be restarted.
+
 ### Oscilator and Clock Configuration
 Board consists of 2 clock sources to use and requires 2 mods to operate. 
 Internal was tested in range of Frequencies of 1-48 MHz. 
@@ -179,3 +187,62 @@ Default Off state - HIGH.
         ...
     }
 
+## This is a psudocode of the load balancer used on MAX14920
+    voltageThreashold = 0.27V
+    balansingTimer = 1250ms     // No idea where that number came from
+    cutOffMinVoltage = 2.9
+    cutOffMaxVoltage = 3.4
+
+    If Balancing Disable due to Discharge - Set registers to zero
+    Else {
+        
+        for every available cell {
+            if averageCellVoltage > Max {
+                update max
+                MarkForBalancing
+            }
+            if averageCellVoltage < Min {
+                update min
+                MarkForDisabelingBalancing
+                Record as potentially unhealthy cell
+            }
+
+            voltageDifference = max - min
+            if(voltageDiffernece >= voltageThreashold && time < balancingTimer) {
+                Enable Balancing on Max
+                Make sure Balancing disabled on Min.
+                Report balancing cell to either turn off voltage reading or
+                adjust based on Internal Resistance
+            }
+            else {
+                Send Disabled balancing command.
+                Report unhealthy cell
+            }
+        }
+    }
+
+## Psudocode for alarm trigger due to overcharge or undercharge
+    cutOffMinVoltage = 2.9
+    cutOffMaxVoltage = 3.4
+    alarmCounter[numberOfCells]
+    for every available cell voltage {
+        if(CellVoltages[i] < cutOffMinVoltage ) {				
+			alarmCounter[i]++;
+		}
+		else if(CellVoltages[i] > cutOffMaxVoltage ) {
+			alarmCounter[i]++;
+		}
+		else {
+			alarmCounter[i]=0;
+		}
+    }
+
+    if alarmCounter.any() > 3
+        Send Alarm signal
+        Create Alarm breaker for 2.50s
+    
+    count down alarm breaker. 
+    Repeat if shutdown not initialised
+
+    
+    

@@ -105,7 +105,42 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 }
 
 /* USER CODE BEGIN 1 */
+void Configurate_CAN(CAN_HandleTypeDef* canHandle,
+					 CAN_TxHeaderTypeDef* TxHeader, uint16_t ID) {
+	CAN_FilterTypeDef sFilterConfig;
 
+	/* Configure the CAN Filter */
+	sFilterConfig.FilterBank = 0;
+	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+	sFilterConfig.FilterIdHigh = 0x0000;
+	sFilterConfig.FilterIdLow = 0x0000;
+	sFilterConfig.FilterMaskIdHigh = 0x0000;
+	sFilterConfig.FilterMaskIdLow = 0x0000;
+	sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+	sFilterConfig.FilterActivation = ENABLE;
+	sFilterConfig.SlaveStartFilterBank = 14;
+
+	if(HAL_CAN_ConfigFilter(&hcan, &sFilterConfig)
+			!= HAL_OK) Error_Handler();
+
+	/* Start the CAN peripheral */
+	if(HAL_CAN_Start(&hcan) != HAL_OK)
+		Error_Handler();
+
+	/* Activate CAN RX Notification */
+	if(HAL_CAN_ActivateNotification(&hcan,
+			CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+		Error_Handler();
+
+	/* Configure Transmission process */
+	TxHeader->StdId = ID;
+	//TxHeader.ExtId = ID;
+	TxHeader->RTR = CAN_RTR_DATA;
+	TxHeader->IDE = CAN_ID_STD;
+	TxHeader->DLC = 2;
+	TxHeader->TransmitGlobalTime = DISABLE;
+}
 /* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
