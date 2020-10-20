@@ -109,6 +109,8 @@ void Configurate_CAN(CAN_HandleTypeDef* canHandle,
 					 CAN_TxHeaderTypeDef* TxHeader, uint16_t ID) {
 	CAN_FilterTypeDef sFilterConfig;
 
+	// only want to accept messages from the AMS
+
 	/* Configure the CAN Filter */
 	sFilterConfig.FilterBank = 0;
 	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
