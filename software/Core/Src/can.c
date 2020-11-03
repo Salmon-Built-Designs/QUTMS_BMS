@@ -21,6 +21,7 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
+#include "QUTMS_can.h"
 #include <string.h>
 #include <stdio.h>
 #include "usart.h"
@@ -33,16 +34,16 @@ void MX_CAN_Init(void)
 {
 
   hcan.Instance = CAN;
-  hcan.Init.Prescaler = 8;
-  hcan.Init.Mode = CAN_MODE_LOOPBACK;
+  hcan.Init.Prescaler = 25;
+  hcan.Init.Mode = CAN_MODE_NORMAL;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan.Init.TimeSeg1 = CAN_BS1_9TQ;
-  hcan.Init.TimeSeg2 = CAN_BS2_8TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = DISABLE;
   hcan.Init.AutoWakeUp = DISABLE;
-  hcan.Init.AutoRetransmission = DISABLE;
-  hcan.Init.ReceiveFifoLocked = ENABLE;
+  hcan.Init.AutoRetransmission = ENABLE;
+  hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan) != HAL_OK)
   {
@@ -70,7 +71,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     */
     GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF4_CAN;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -105,8 +106,7 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 }
 
 /* USER CODE BEGIN 1 */
-void Configurate_CAN(CAN_HandleTypeDef* canHandle,
-					 CAN_TxHeaderTypeDef* TxHeader, uint16_t ID) {
+void Configure_CAN(CAN_HandleTypeDef* canHandle) {
 	CAN_FilterTypeDef sFilterConfig;
 
 	// only want to accept messages from the AMS
@@ -115,10 +115,15 @@ void Configurate_CAN(CAN_HandleTypeDef* canHandle,
 	sFilterConfig.FilterBank = 0;
 	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
 	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-	sFilterConfig.FilterIdHigh = 0x0000;
-	sFilterConfig.FilterIdLow = 0x0000;
-	sFilterConfig.FilterMaskIdHigh = 0x0000;
-	sFilterConfig.FilterMaskIdLow = 0x0000;
+
+	// what bits of the CAN ID do we care about
+	sFilterConfig.FilterMaskIdHigh = (CAN_MASK_SRC_ID & 0xFFFF) >> (16 - 3);
+	sFilterConfig.FilterMaskIdLow = (CAN_MASK_SRC_ID & 0xFFFF) << 3;
+
+	// what values do we want
+	sFilterConfig.FilterIdHigh = (CAN_SRC_ID_BMS & 0xFFFF) >> (16 - 3);
+	sFilterConfig.FilterIdLow = (CAN_SRC_ID_BMS & 0xFFFF) << 3;
+
 	sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
 	sFilterConfig.FilterActivation = ENABLE;
 	sFilterConfig.SlaveStartFilterBank = 14;
@@ -134,14 +139,6 @@ void Configurate_CAN(CAN_HandleTypeDef* canHandle,
 	if(HAL_CAN_ActivateNotification(&hcan,
 			CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
 		Error_Handler();
-
-	/* Configure Transmission process */
-	TxHeader->StdId = ID;
-	//TxHeader.ExtId = ID;
-	TxHeader->RTR = CAN_RTR_DATA;
-	TxHeader->IDE = CAN_ID_STD;
-	TxHeader->DLC = 2;
-	TxHeader->TransmitGlobalTime = DISABLE;
 }
 /* USER CODE END 1 */
 

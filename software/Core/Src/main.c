@@ -23,7 +23,6 @@
 #include "i2c.h"
 #include "tim.h"
 #include "usart.h"
-#include "wwdg.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -79,6 +78,9 @@ long int temp_high0, temp_low0;		// Figure out replacement. struct in struct.
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+
+
 void SystemClock_8MHz_Config(void);
 void delay_us (uint16_t us);
 
@@ -119,167 +121,53 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  	// SystemClock_8MHz_Config();	// Uncomment to skip shipment.
-    MX_USART1_UART_Init();
-    sprintf(msgBuffer, "DEBUG: Waiting Exit From ShipMod");
-	if(HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
-			HAL_MAX_DELAY) != HAL_OK) Error_Handler();
-	HAL_Delay(300);
-	// If Ship mode exited restore to 8MHz and external oscillator
-	SystemClock_8MHz_Config();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_I2C1_Init();
-  MX_USART1_UART_Init();
-  MX_CAN_Init();
-  MX_TIM3_Init();
-  MX_TIM1_Init();
-  MX_WWDG_Init();
+  //MX_I2C1_Init();
+ // MX_USART1_UART_Init();
+  ///MX_CAN_Init();
+  //MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-    // Set initial BQ variables.
-    uint8_t sys_stat = 0;
-    HAL_StatusTypeDef BQ_result = HAL_BUSY;
+
+
+  SystemClock_8MHz_Config();
+  MX_GPIO_Init();
+  HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_SET);
+
+      HAL_Delay(10);
+
+  HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_RESET);
+
+  MX_CAN_Init();
+
+  HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_SET);
+
 
 	// Initialize CAN BUS ID
-    //TODO: Determine ID from switch positions.
-    Configurate_CAN(&hcan, &TxHeader, GetHardwareID());
+    //Configure_CAN(&hcan);
 
-	// Start the us Timer. Hold enabling TIM3
-	HAL_TIM_Base_Start(&htim1);
-	//HAL_TIM_Base_Start(&htim3);
-	HAL_Delay(1);
 
-	sprintf(msgBuffer, "DEBUG: BQ, CAN, TMP set.\r\n");
-	if(HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
-			HAL_MAX_DELAY) != HAL_OK) Error_Handler();
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	// Get status from BQ
-	HAL_Delay(1);	//t_i2c_startup = 1ms Delay
-	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT,
-			&sys_stat);
-
-	if (BQ_result != HAL_OK) {
-		sprintf(msgBuffer, "ERROR: BQ reading sys_stat.\r\n");
-		HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
-				HAL_MAX_DELAY);
-	} else {
-		sprintf(msgBuffer, "DEBUG: BQ sys_stat: %d\r\n", sys_stat);
-		HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
-				HAL_MAX_DELAY);
-		// DEBUG: Print Sys stat register
-		bq769x0_PrintStatusRegister(sys_stat);
-
-		// Clear SYS STAT to allow
-		if (sys_stat > 0) {
-			uint8_t clear = sys_stat;// & 0b00010011;
-			// SCD
-			BQ_result = bq769x0_reg_write_byte(&hi2c1,
-					BQ_SYS_STAT, clear);
-			sprintf(msgBuffer, "result: %d\r\n", BQ_result);
-			HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
-					HAL_MAX_DELAY);
-		}
-	}
-
 
 	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 		HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_RESET);
-		for (int i = 0; i < N_CELLS; i++) {
-
-			// Start by reading Voltage of 1 cell
-			BQ_result = bq769x0_read_voltage(&hi2c1, i, &voltage_read[i]);
-			if (BQ_result != HAL_OK) {
-				sprintf(msgBuffer, "ERROR: Voltage %d Unsuccessful.\r\n", i);
-				HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
-						HAL_MAX_DELAY);
-			} else {
-				// Perform temperature readings.
-				HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_RESET);
-				HAL_TIM_Base_Start(&htim3);			// Figure out if necessary to
-				//HAL_TIM_Base_Start_IT(&htim3);	//starts interrupt.
-
-				tempsegment = 0;
-				send_Pulse(GPIOA, GPIO_PIN_1);
-
-				while(tempsegment < 7) {}		// 2 Sensors took 4(5) iterations; 3 Sensors 6(7)
-				// With WatchDoG timer, this part will not cause deadlock condition
-				HAL_WWDG_Refresh(&hwwdg);
-
-				//TODO: Incorrect assignment. Fix later
-				TMP05_Readings.TEMP1[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
-				TMP05_Readings.TEMP2[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
-				TMP05_Readings.TEMP3[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
-				TMP05_Readings.TEMP4[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
-				TMP05_Readings.TEMP5[i] += TMP05_PeriodsToTMPs(temp_high0, temp_low0);
-
-				HAL_TIM_Base_Stop(&htim3);
-				//HAL_TIM_Base_Stop_IT(&htim3);
-				HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_SET);
-			}
-
-			// Transmit one voltage over CAN-bus
-			sprintf(msgBuffer, "Voltage %d: %d.\r\n", i, voltage_read[i]);
-			HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer,
-					strlen((char*) msgBuffer), HAL_MAX_DELAY);
-
-			// Transmit Voltage over CAN
-			TxData[0] = i;
-			TxData[1] = (uint8_t) voltage_read[i];
-			if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
-						  != HAL_OK) Error_Handler();
-
-		}
+		HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_SET);
+		HAL_Delay(1000);
 		HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_SET);
-
-		// Calculate TMPs and transmit as strings
-		int i = 0;
-		sprintf(msgBuffer, "Temp1: %s C ::: Temp2: %s C ::: Temp3: %s "
-				"::: Temp4: %s C ::: Temp5: %s  C.\n",
-				FloatToStr(TMP05_Readings.TEMP1[i]/N_CELLS),
-				FloatToStr(TMP05_Readings.TEMP2[i]/N_CELLS),
-				FloatToStr(TMP05_Readings.TEMP3[i]/N_CELLS),
-				FloatToStr(TMP05_Readings.TEMP4[i]/N_CELLS),
-				FloatToStr(TMP05_Readings.TEMP5[i]/N_CELLS)
-				);
-
-		HAL_UART_Transmit(&huart1, (uint8_t*)msgBuffer,
-					 strlen((char*)msgBuffer), HAL_MAX_DELAY);
-
-		// Transmit over CAN bus.
-		TxData[0] = 255;
-		TxData[1] = (uint8_t) TMP05_Readings.TEMP1[i]/N_CELLS;
-		TxData[2] = (uint8_t) TMP05_Readings.TEMP2[i]/N_CELLS;
-		TxData[3] = (uint8_t) TMP05_Readings.TEMP3[i]/N_CELLS;
-		TxData[4] = (uint8_t) TMP05_Readings.TEMP4[i]/N_CELLS;
-		TxData[5] = (uint8_t) TMP05_Readings.TEMP5[i]/N_CELLS;
-		if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
-					  != HAL_OK) Error_Handler();
-
-		// Transmit Overal Voltage. Either obtain it if posible, or sum it
-		for(int i = 0; i < N_CELLS; i++) overalVoltage += voltage_read[i];
-
-		TxData[0] = 125;
-		TxData[1] = (uint8_t) overalVoltage;
-		if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
-					  != HAL_OK) Error_Handler();
-
-		//TODO: Continue with decision on Balancing.
-		// Transmit status of the balancing
-		TxData[0] = 100;
-		TxData[1] = 0b11111111;
-		TxData[1] = 0b11000000;
-
-		if(HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
-					  != HAL_OK) Error_Handler();
+		HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_RESET);
+		HAL_Delay(1000);
 	}
   /* USER CODE END 3 */
 }
@@ -368,8 +256,8 @@ void SystemClock_8MHz_Config(void) {
  * Microseconds delay. With 48MHz  - 1MHz.
  */
 void delay_us (uint16_t us) {
-	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
-	while (__HAL_TIM_GET_COUNTER(&htim1) < us);  // wait for the counter to reach the us input in the parameter
+	//__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
+	//while (__HAL_TIM_GET_COUNTER(&htim1) < us);  // wait for the counter to reach the us input in the parameter
 }
 
 /*
@@ -391,86 +279,34 @@ float TMP05_PeriodsToTMPs(long int high, long int low) {
 }
 
 /*
- * Inhereted from Atmega controllers.
- * Converts float reading to String, which later can be send
- * through UART.
- *
- * @param 	- x any floating number, either negative or positive
- * @return	- Same float as a string.
- */
-char *FloatToStr(float x) {
-	char *tmpSign = (x < 0) ? "-" : "";
-	float tmpVal = (x < 0) ? -x : x;
-
-	int tmpInt1 = tmpVal;                  // Get the integer (678).
-	float tmpFrac = tmpVal - tmpInt1;      // Get fraction (0.0123).
-	int tmpInt2 = trunc(tmpFrac * 10000);  // Turn into integer (123).
-
-	sprintf (msgBuffer, "%s%d.%04d\n", tmpSign, tmpInt1, tmpInt2);
-
-	return msgBuffer;
-}
-
-/*
- * Similar to MAX14920 helps to visualise Values of the register with references.
- * Uses a Masking approach to get each bit of 8bit variables and prints as a
- * string over HAL.
- *
- * @param	- stat unsigned 8 bit variable
- */
-void bq769x0_PrintStatusRegister(uint8_t stat) {
-	sprintf(msgBuffer, "\n\n\r ||||||||||||||||||||||||||\n SYS_STAT: ");
-	HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
-			HAL_MAX_DELAY);
-	int i = 0;
-	for (unsigned int mask = 0x80; mask != 0; mask >>= 1) {
-		switch (i) {
-			case 0:		// 1: Fresh Coulomb Counter reading is available.
-				sprintf (msgBuffer, " CC_READY:");
-				break;
-			case 1:		// Reserved. Do not us.
-				sprintf (msgBuffer, " RSVD:");
-				break;
-			case 2:		// 1: Internal chip fault detected.
-				sprintf (msgBuffer, " XREADY:");
-				break;
-			case 3:		// 1: External override detected.
-				sprintf (msgBuffer, " ALERT:");
-				break;
-			case 4:		// 1: UnderVoltage Detected
-				sprintf (msgBuffer, " UV:");
-				break;
-			case 5:		// 1: OverVoltage Detected
-				sprintf (msgBuffer, " OV:");
-				break;
-			case 6:		// 1: Short circuit in discharge fault Detected
-				sprintf (msgBuffer, " SCD:");
-				break;
-			case 7:		// 1: Over current in discharge fault Detected
-				sprintf (msgBuffer, " OCD:");
-				break;
-		}
-		HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer,
-					strlen((char*) msgBuffer), HAL_MAX_DELAY);
-
-		if (stat & mask) sprintf (msgBuffer, "%d", 1);	// bit is 1
-		else 			 sprintf (msgBuffer, "%d", 0);	// bit is 0
-
-		HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer,
-							strlen((char*) msgBuffer), HAL_MAX_DELAY);
-		i++;
-	}
-
-}
-
-/*
  * Return the ID set but Hardware.
  * TODO: Requires usage of all pins.
  */
 uint16_t GetHardwareID() {
-	return (HAL_GPIO_ReadPin(GPIOB, ID1_Pin));
+	return 0;//(HAL_GPIO_ReadPin(GPIOB, ID1_Pin));
 }
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM2 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM2) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
@@ -479,12 +315,11 @@ uint16_t GetHardwareID() {
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+	HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_RESET);
 	/* User can add his own implementation to report the HAL error return state */
 	while(1) {
-		sprintf(msgBuffer, "Error Handler Loop.\r\n");
-		HAL_UART_Transmit(&huart1, (uint8_t*) msgBuffer, strlen((char*) msgBuffer),
-				HAL_MAX_DELAY);
-		HAL_Delay(1000);
+		HAL_Delay(100);
 	}
   /* USER CODE END Error_Handler_Debug */
 }

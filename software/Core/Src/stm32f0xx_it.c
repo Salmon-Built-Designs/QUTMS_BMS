@@ -68,7 +68,8 @@ volatile struct TMP_Period_Records TMP05_Period_Records;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim2;
+
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -138,7 +139,7 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
   /* USER CODE END SysTick_IRQn 0 */
-  HAL_IncTick();
+
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   /* USER CODE END SysTick_IRQn 1 */
@@ -167,140 +168,17 @@ void EXTI4_15_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM3 global interrupt.
+  * @brief This function handles TIM2 global interrupt.
   */
-void TIM3_IRQHandler(void)
+void TIM2_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM3_IRQn 0 */
-	//TODO: THis approach will not work with a single Timer. Use Marks idea to follow the code.
-	if (tempsegment == 0) {
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 1) {
-		//TMP05_Period_Records.Line1->High = (__HAL_TIM_GET_COUNTER(&htim1)); //Convert to integer
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 2) {
-		TMP05_Period_Records.Line1->Low  = (__HAL_TIM_GET_COUNTER(&htim3)); //Convert to integer
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 3) {
-		//TMP05_Period_Records.Line2->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 4) {
-		TMP05_Period_Records.Line2->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 5) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 6) {
-		TMP05_Period_Records.Line3->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 7) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	}
-	tempsegment++;
-	// REPEAT ONLY TO SEE MEMORY WEIGHT for 4 lines
-	if (tempsegment == 0) {
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 1) {
-		//TMP05_Period_Records.Line1->High = (__HAL_TIM_GET_COUNTER(&htim1)); //Convert to integer
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 2) {
-		TMP05_Period_Records.Line1->Low  = (__HAL_TIM_GET_COUNTER(&htim3)); //Convert to integer
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 3) {
-		//TMP05_Period_Records.Line2->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 4) {
-		TMP05_Period_Records.Line2->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 5) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 6) {
-		TMP05_Period_Records.Line3->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 7) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	}
-	if (tempsegment == 0) {
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 1) {
-		//TMP05_Period_Records.Line1->High = (__HAL_TIM_GET_COUNTER(&htim1)); //Convert to integer
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 2) {
-		TMP05_Period_Records.Line1->Low  = (__HAL_TIM_GET_COUNTER(&htim3)); //Convert to integer
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 3) {
-		//TMP05_Period_Records.Line2->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 4) {
-		TMP05_Period_Records.Line2->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 5) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 6) {
-		TMP05_Period_Records.Line3->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 7) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	}
-	if (tempsegment == 0) {
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 1) {
-		//TMP05_Period_Records.Line1->High = (__HAL_TIM_GET_COUNTER(&htim1)); //Convert to integer
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 2) {
-		TMP05_Period_Records.Line1->Low  = (__HAL_TIM_GET_COUNTER(&htim3)); //Convert to integer
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 3) {
-		//TMP05_Period_Records.Line2->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 4) {
-		TMP05_Period_Records.Line2->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 5) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 6) {
-		TMP05_Period_Records.Line3->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 7) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	}
-	if (tempsegment == 0) {
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 1) {
-		//TMP05_Period_Records.Line1->High = (__HAL_TIM_GET_COUNTER(&htim1)); //Convert to integer
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 2) {
-		TMP05_Period_Records.Line1->Low  = (__HAL_TIM_GET_COUNTER(&htim3)); //Convert to integer
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 3) {
-		//TMP05_Period_Records.Line2->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 4) {
-		TMP05_Period_Records.Line2->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		//__HAL_TIM_SET_COUNTER(&htim1,0);
-	} else if (tempsegment == 5) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 6) {
-		TMP05_Period_Records.Line3->Low = (__HAL_TIM_GET_COUNTER(&htim3));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	} else if (tempsegment == 7) {
-		//TMP05_Period_Records.Line3->High = (__HAL_TIM_GET_COUNTER(&htim1));
-		__HAL_TIM_SET_COUNTER(&htim3,0);
-	}
+  /* USER CODE BEGIN TIM2_IRQn 0 */
 
-  /* USER CODE END TIM3_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim3);
-  /* USER CODE BEGIN TIM3_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
 
-  /* USER CODE END TIM3_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

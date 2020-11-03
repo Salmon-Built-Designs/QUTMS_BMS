@@ -39,8 +39,7 @@ extern CAN_HandleTypeDef hcan;
 void MX_CAN_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-void Configurate_CAN(CAN_HandleTypeDef* canHandle,
-					 CAN_TxHeaderTypeDef* TxHeader, uint16_t ID);
+void Configure_CAN(CAN_HandleTypeDef* canHandle);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
