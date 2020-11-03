@@ -21,7 +21,6 @@
 #include "main.h"
 #include "can.h"
 #include "i2c.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -37,14 +36,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-struct TMP {
-	float TEMP1[4];
-	float TEMP2[4];
-	float TEMP3[3];
-	float TEMP4[4];
-	float TEMP5[4];
-};
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -60,19 +51,6 @@ struct TMP {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-char msgBuffer[256];
-
-CAN_TxHeaderTypeDef 	TxHeader;
-uint8_t					TxData[8];
-uint32_t 				TxMailbox;
-
-uint16_t voltage_read[N_CELLS] = {0};
-uint16_t overalVoltage = 0;
-
-volatile struct TMP TMP05_Readings;
-
-extern int tempsegment;
-long int temp_high0, temp_low0;		// Figure out replacement. struct in struct.
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -82,15 +60,9 @@ void SystemClock_Config(void);
 
 
 void SystemClock_8MHz_Config(void);
-void delay_us (uint16_t us);
 
-void send_Pulse(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
-float TMP05_PeriodsToTMPs(long int high, long int low);
 
-char *FloatToStr(float x);
-void bq769x0_PrintStatusRegister(uint8_t stat);
-
-uint16_t GetHardwareID();
+uint8_t GetHardwareID();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -126,30 +98,34 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   //MX_I2C1_Init();
- // MX_USART1_UART_Init();
-  ///MX_CAN_Init();
-  //MX_TIM1_Init();
+  //MX_USART1_UART_Init();
+  //MX_CAN_Init();
   /* USER CODE BEGIN 2 */
+
+
 
 
   SystemClock_8MHz_Config();
   MX_GPIO_Init();
-  HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_SET);
 
-      HAL_Delay(10);
+  HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
 
-  HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_RESET);
+  HAL_Delay(10);
 
+  HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
+
+  MX_I2C1_Init();
+  MX_USART1_UART_Init();
   MX_CAN_Init();
 
-  HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_SET);
 
 
-	// Initialize CAN BUS ID
-    //Configure_CAN(&hcan);
+
+  HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
+
+
+  // Initialize CAN
+   Configure_CAN(&hcan);
 
 
 
@@ -158,15 +134,34 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+   uint16_t voltages[4];
+   voltages[0] = 0;
+   voltages[1] = 1;
+   voltages[2] = 2;
+   voltages[3] = 3;
+
+   BMS_TransmitVoltage_t voltage_msg = Compose_BMS_TransmitVoltage(2, 3, voltages);
+   CAN_TxHeaderTypeDef header =
+   		{
+   				.ExtId = voltage_msg.id,
+   				.IDE = CAN_ID_EXT,
+   				.RTR = CAN_RTR_DATA,
+   				.DLC = sizeof(voltage_msg.data),
+   				.TransmitGlobalTime = DISABLE,
+   		};
+
+   uint32_t txMailbox = 0;
+
 	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+		HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 		HAL_Delay(1000);
-		HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
 		HAL_Delay(1000);
 	}
   /* USER CODE END 3 */
@@ -252,61 +247,15 @@ void SystemClock_8MHz_Config(void) {
 		Error_Handler();
 	}
 }
-/*
- * Microseconds delay. With 48MHz  - 1MHz.
- */
-void delay_us (uint16_t us) {
-	//__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value a 0
-	//while (__HAL_TIM_GET_COUNTER(&htim1) < us);  // wait for the counter to reach the us input in the parameter
-}
-
-/*
- * Datasheet claims that in daisy chain the pulse have to be from Low to High.
- * Withing time 20nS > delay > 25us.
- */
-void send_Pulse(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin) {
-	// Send Pulse
-	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_SET);
-	delay_us(2);
-	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_RESET);
-}
-
-/*
- * Converts periods of ADC into Celsius values. In what time value?
- */
-float TMP05_PeriodsToTMPs(long int high, long int low) {
-	return 421-(751*((((float)high)/1000)/(((float)low)/1000)));
-}
 
 /*
  * Return the ID set but Hardware.
  * TODO: Requires usage of all pins.
  */
-uint16_t GetHardwareID() {
+uint8_t GetHardwareID() {
 	return 0;//(HAL_GPIO_ReadPin(GPIOB, ID1_Pin));
 }
 /* USER CODE END 4 */
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM2 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM2) {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-
-  /* USER CODE END Callback 1 */
-}
 
 /**
   * @brief  This function is executed in case of error occurrence.
@@ -315,8 +264,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-	HAL_GPIO_WritePin(GPIOB, LED0_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOB, LED1_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);
 	/* User can add his own implementation to report the HAL error return state */
 	while(1) {
 		HAL_Delay(100);
