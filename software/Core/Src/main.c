@@ -33,7 +33,7 @@
 #include <math.h>
 
 #include "bq769x0.h"
-
+#include "BMS_CAN_Messages.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
