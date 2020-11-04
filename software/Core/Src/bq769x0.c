@@ -148,6 +148,35 @@ HAL_StatusTypeDef bq769x0_read_voltage(I2C_HandleTypeDef *hi2c, int cell,
 	return HAL_OK;
 }
 
+HAL_StatusTypeDef bq769x0_read_voltage_group(I2C_HandleTypeDef *hi2c,
+		int group_num, uint16_t voltages[4]) {
+	// 4 voltages per group
+	uint8_t start_reg = BQ769X0_REG_VC1_HI + (group_num * 4) * 2;
+	uint8_t buffer[8];
+
+	uint8_t num_cells = 4;
+	if (group_num == 2) {
+		// group 2 has only 2 voltages (4 + 4 + 2 = 10)
+		num_cells = 2;
+	}
+
+	HAL_StatusTypeDef ret = bq769x0_reg_read_bytes(hi2c, start_reg, buffer, num_cells*2);
+	if (ret != HAL_OK) {
+		return ret;
+	}
+
+
+	memset(voltages, 0, sizeof(uint16_t)*4);
+
+	uint16_t adc_value = 0;
+	for (int i = 0; i < num_cells; i++) {
+		adc_value = ((buffer[i*2] & 0b00111111) << 8) | buffer[i*2 + 1];
+		voltages[i] = adc_value * (365 + adc_voltage_gain) / 1000 + adc_voltage_offset;
+	}
+
+	return HAL_OK;
+}
+
 HAL_StatusTypeDef bq769x0_read_pack_voltage(I2C_HandleTypeDef *hi2c,
 		int total_cells, uint16_t *voltage) {
 	if (adc_voltage_gain == 0 || adc_voltage_offset == 0) {
@@ -180,25 +209,29 @@ HAL_StatusTypeDef bq769x0_read_pack_voltage(I2C_HandleTypeDef *hi2c,
 
 }
 
-HAL_StatusTypeDef bq769x0_set_under_voltage(I2C_HandleTypeDef *hi2c, uint16_t under_voltage) {
+HAL_StatusTypeDef bq769x0_set_under_voltage(I2C_HandleTypeDef *hi2c,
+		uint16_t under_voltage) {
 	if (adc_voltage_gain == 0 || adc_voltage_offset == 0) {
-			bq769x0_read_gain_and_offset(hi2c, &adc_voltage_gain,
-					&adc_voltage_offset);
-		}
+		bq769x0_read_gain_and_offset(hi2c, &adc_voltage_gain,
+				&adc_voltage_offset);
+	}
 
-	uint16_t UV_TRIP_FULL = (under_voltage - adc_voltage_offset) / adc_voltage_gain;
+	uint16_t UV_TRIP_FULL = (under_voltage - adc_voltage_offset)
+			/ adc_voltage_gain;
 	uint8_t UV_TRIP = ((UV_TRIP_FULL >> 4) & 0b11111111);
 
 	return bq769x0_reg_write_byte(hi2c, BQ_UV_TRIP, UV_TRIP);
 }
 
-HAL_StatusTypeDef bq769x0_set_over_voltage(I2C_HandleTypeDef *hi2c, uint16_t over_voltage) {
+HAL_StatusTypeDef bq769x0_set_over_voltage(I2C_HandleTypeDef *hi2c,
+		uint16_t over_voltage) {
 	if (adc_voltage_gain == 0 || adc_voltage_offset == 0) {
-			bq769x0_read_gain_and_offset(hi2c, &adc_voltage_gain,
-					&adc_voltage_offset);
-		}
+		bq769x0_read_gain_and_offset(hi2c, &adc_voltage_gain,
+				&adc_voltage_offset);
+	}
 
-	uint16_t OV_TRIP_FULL = (over_voltage - adc_voltage_offset) / adc_voltage_gain;
+	uint16_t OV_TRIP_FULL = (over_voltage - adc_voltage_offset)
+			/ adc_voltage_gain;
 	uint8_t OV_TRIP = ((OV_TRIP_FULL >> 4) & 0b11111111);
 
 	return bq769x0_reg_write_byte(hi2c, BQ_OV_TRIP, OV_TRIP);
@@ -214,10 +247,10 @@ HAL_StatusTypeDef bq769x0_set_DSG(I2C_HandleTypeDef *hi2c, uint8_t value) {
 	}
 
 	// clear DSG_ON
-	currentReg &= ~(1<<1);
+	currentReg &= ~(1 << 1);
 
 	// set DSG VALUE
-	currentReg |= ((1<<1) & value);
+	currentReg |= ((1 << 1) & value);
 
 	// write back to register
 	return bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL2, currentReg);
@@ -233,10 +266,10 @@ HAL_StatusTypeDef bq769x0_set_CHG(I2C_HandleTypeDef *hi2c, uint8_t value) {
 	}
 
 	// clear CHG_ON
-	currentReg &= ~(1<<0);
+	currentReg &= ~(1 << 0);
 
 	// set CHG VALUE
-	currentReg |= ((1<<0) & value);
+	currentReg |= ((1 << 0) & value);
 
 	// write back to register
 	return bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL2, currentReg);
@@ -245,22 +278,21 @@ HAL_StatusTypeDef bq769x0_set_CHG(I2C_HandleTypeDef *hi2c, uint8_t value) {
 HAL_StatusTypeDef bq769x0_set_CC_mode(I2C_HandleTypeDef *hi2c, uint8_t mode) {
 	uint8_t currentReg = 0;
 	HAL_StatusTypeDef result = bq769x0_reg_read_byte(hi2c, BQ_SYS_CTRL2,
-				&currentReg);
+			&currentReg);
 
 	if (result != HAL_OK) {
-			return result;
-		}
+		return result;
+	}
 
 	// clear CC_EN and CC_ONESHOT
-	currentReg &= ~(1<<5);
-	currentReg &= ~(1<<6);
+	currentReg &= ~(1 << 5);
+	currentReg &= ~(1 << 6);
 
 	// set mode
-	if(mode == BQ_CC_ALWAYSON) {
-		currentReg |= 1<<6;
-	}
-	else {
-		currentReg |= 1<<5;
+	if (mode == BQ_CC_ALWAYSON) {
+		currentReg |= 1 << 6;
+	} else {
+		currentReg |= 1 << 5;
 	}
 
 	// write back to register
@@ -271,10 +303,10 @@ HAL_StatusTypeDef bq769x0_read_CC(I2C_HandleTypeDef *hi2c, uint16_t *voltage) {
 	uint8_t buffer = 0;
 
 	HAL_StatusTypeDef ret = bq769x0_reg_read_byte(hi2c, BQ_CC_HI, &buffer);
-		if (ret != HAL_OK) {
-			*voltage = 0;
-			return ret;
-		}
+	if (ret != HAL_OK) {
+		*voltage = 0;
+		return ret;
+	}
 
 	uint16_t adc_value = buffer << 8;
 
@@ -287,7 +319,7 @@ HAL_StatusTypeDef bq769x0_read_CC(I2C_HandleTypeDef *hi2c, uint16_t *voltage) {
 	adc_value |= buffer;
 
 	// converting to two`s complement
-	if(adc_value & (1<<15)) {
+	if (adc_value & (1 << 15)) {
 		adc_value = (~adc_value + 1) * -1;
 	}
 
@@ -295,7 +327,6 @@ HAL_StatusTypeDef bq769x0_read_CC(I2C_HandleTypeDef *hi2c, uint16_t *voltage) {
 
 	return HAL_OK;
 }
-
 
 //Not finished, just need to set BQ_CELLBAL1 as reg1 and BQ_CELLBAL2 as reg2
 
@@ -326,7 +357,7 @@ HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c,
 	}
 
 	// clear current value
-	cur_value = cur_value & ~(1<<bit_num);
+	cur_value = cur_value & ~(1 << bit_num);
 
 	// set bit
 	cur_value = cur_value | (state << bit_num);
@@ -343,5 +374,4 @@ HAL_StatusTypeDef bq769x0_reset_cell_balancing(I2C_HandleTypeDef *hi2c) {
 	return res;
 
 }
-
 

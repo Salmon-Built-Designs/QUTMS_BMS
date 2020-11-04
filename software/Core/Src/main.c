@@ -95,7 +95,7 @@ int main(void) {
 	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
+	//MX_GPIO_Init();
 	//MX_I2C1_Init();
 	//MX_USART1_UART_Init();
 	//MX_CAN_Init();
@@ -129,7 +129,7 @@ int main(void) {
 		Error_Handler();
 	}
 
-	if (sys_stat & SYS_STAT_FLAG_BITS > 0) {
+	if ((sys_stat & SYS_STAT_FLAG_BITS) > 0) {
 		// fault pins are set whats the deal
 
 		// only clear pins we care about
@@ -167,24 +167,17 @@ int main(void) {
 		Error_Handler();
 	}
 
+	// read BMS ID
+	uint8_t bms_id = GetHardwareID();
+
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 
-	uint16_t voltages[4];
-	voltages[0] = 0;
-	voltages[1] = 1;
-	voltages[2] = 2;
-	voltages[3] = 3;
-
-	BMS_TransmitVoltage_t voltage_msg = Compose_BMS_TransmitVoltage(2, 3,
-			voltages);
-	CAN_TxHeaderTypeDef header = { .ExtId = voltage_msg.id, .IDE = CAN_ID_EXT,
-			.RTR = CAN_RTR_DATA, .DLC = sizeof(voltage_msg.data),
-			.TransmitGlobalTime = DISABLE, };
-
+	uint16_t group_voltages[4];
 	uint32_t txMailbox = 0;
+	BMS_TransmitVoltage_t voltage_msg;
 
 	while (1) {
 		/* USER CODE END WHILE */
@@ -192,10 +185,27 @@ int main(void) {
 		/* USER CODE BEGIN 3 */
 		HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-		HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
-		HAL_Delay(1000);
+
+		for (int i = 0; i < 3; i++) {
+			// read and transmit all voltages
+			BQ_result = bq769x0_read_voltage_group(&hi2c1, i, group_voltages);
+			if (BQ_result != HAL_OK) {
+				Error_Handler();
+			}
+
+			// transmit voltage block
+			voltage_msg = Compose_BMS_TransmitVoltage(bms_id, i, group_voltages);
+			CAN_TxHeaderTypeDef header = { .ExtId = voltage_msg.id, .IDE = CAN_ID_EXT,
+						.RTR = CAN_RTR_DATA, .DLC = sizeof(voltage_msg.data),
+						.TransmitGlobalTime = DISABLE, };
+
+			HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
+
+		}
+
 		HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+
 		HAL_Delay(1000);
 	}
 	/* USER CODE END 3 */

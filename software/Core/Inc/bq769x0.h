@@ -50,6 +50,8 @@ HAL_StatusTypeDef bq769x0_read_gain_and_offset(I2C_HandleTypeDef *hi2c,
 		uint8_t *gain, uint8_t *offset);
 HAL_StatusTypeDef bq769x0_read_voltage(I2C_HandleTypeDef *hi2c, int cell,
 		uint16_t *voltage);
+HAL_StatusTypeDef bq769x0_read_voltage_group(I2C_HandleTypeDef *hi2c, int group_num,
+		uint16_t voltages[4]);
 HAL_StatusTypeDef bq769x0_read_pack_voltage(I2C_HandleTypeDef *hi2c, int total_cells,
 		uint16_t *voltage);
 
