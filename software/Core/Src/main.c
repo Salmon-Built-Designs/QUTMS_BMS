@@ -35,12 +35,32 @@
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+#define NUM_READINGS 9
+#define NUM_TEMPS 12
+
 /* USER CODE BEGIN PTD */
+struct raw_temp_reading {
+	long times[NUM_READINGS];
+};
+typedef struct raw_temp_reading raw_temp_reading;
+
+struct temp_reading {
+	float temps[NUM_TEMPS];
+};
+typedef struct temp_reading temp_reading;
+
+// TODO: match this to physical number correctly
+uint8_t num_temp_readings[4] = {4,3,4,3};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+
 #define N_CELLS	10
+
+
+raw_temp_reading raw_temp_readings[4];
 
 // OVRD_ALERT, SCD, OCD
 #define SYS_STAT_FLAG_BITS 0b00010011
@@ -63,6 +83,10 @@ void SystemClock_Config(void);
 void SystemClock_8MHz_Config(void);
 
 uint8_t GetHardwareID();
+
+void  get_temp_reading();
+temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -98,7 +122,7 @@ int main(void)
   /* Initialize all configured peripherals */
  // MX_GPIO_Init();
   //MX_I2C1_Init();
-  ////MX_USART1_UART_Init();
+  //MX_USART1_UART_Init();
   //MX_CAN_Init();
   /* USER CODE BEGIN 2 */
 
@@ -179,6 +203,7 @@ int main(void)
 	uint16_t group_voltages[4];
 	uint32_t txMailbox = 0;
 	BMS_TransmitVoltage_t voltage_msg;
+	temp_reading current_temp_reading;
 
 	while (1) {
     /* USER CODE END WHILE */
@@ -190,6 +215,10 @@ int main(void)
 		bms_id = GetHardwareID();
 		HAL_UART_Transmit(&huart1, &bms_id, 1, HAL_MAX_DELAY);
 
+		// read temps
+		get_temp_reading();
+		current_temp_reading = parse_temp_readings(raw_temp_readings);
+		// check watchdog???
 
 		for (int i = 0; i < 3; i++) {
 			// read and transmit all voltages
@@ -311,6 +340,71 @@ uint8_t GetHardwareID() {
 
 	return hardware_ID;
 }
+
+void get_temp_reading() {
+	memset(raw_temp_readings, 0, sizeof(raw_temp_reading)*4);
+	GPIO_TypeDef * ports[4];
+	uint16_t pins[4];
+
+	uint8_t read_count[4];
+	uint8_t prev_state[4];
+	int i = 0;
+	for(i = 0; i < 4; i++) {
+		read_count[i] = 0;
+		prev_state[i] = 1;
+	}
+
+	// send pulse
+	// low
+	// high
+	// low - start reading
+
+	bool break_loop = false;
+	uint8_t value = 0;
+	while(!break_loop)  {
+		if ((read_count[0] >= num_temp_readings[0])
+				&& (read_count[1] >= num_temp_readings[1] )
+				&& (read_count[2] >= num_temp_readings[2])
+				&& (read_count[3] >= num_temp_readings[3])) {
+			// we have all the readings we need
+			break_loop = true;
+			break;
+		}
+
+		for (i = 0; i < 4; i++) {
+			if (read_count[i] >= num_temp_readings[i]) {
+				continue;
+			}
+
+			value = HAL_GPIO_ReadPin(ports[i], pins[i]);
+			if (value != prev_state[i]) {
+				// set to current time
+				raw_temp_readings[i].times[read_count[i]] = 0;
+				read_count[i]++;
+				prev_state[i] = value;
+			}
+		}
+	}
+
+	// pull pins high again
+
+
+}
+
+temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]) {
+	temp_reading reading = {0};
+	int temp_num = 0;
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < num_temp_readings[i]; j++) {
+			long th = raw_readings[i].times[j*2+1] - raw_readings[i].times[j*2];
+			long tl = raw_readings[i].times[j*2+2] - raw_readings[i].times[j*2+1];
+			reading.temps[temp_num] = 421 - 751*((float)th/(float)tl);
+			temp_num++;
+		}
+	}
+	return reading;
+}
+
 /* USER CODE END 4 */
 
 /**
