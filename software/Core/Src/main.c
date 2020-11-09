@@ -21,6 +21,7 @@
 #include "main.h"
 #include "can.h"
 #include "i2c.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -50,7 +51,7 @@ struct temp_reading {
 typedef struct temp_reading temp_reading;
 
 // TODO: match this to physical number correctly
-uint8_t num_temp_readings[4] = {4,3,4,3};
+uint8_t num_temp_readings[4] = {9,7,9,7};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -74,8 +75,8 @@ raw_temp_reading raw_temp_readings[4];
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-GPIO_TypeDef * ports[5] = {TEMP1_GPIO_Port,TEMP2_GPIO_Port,TEMP3_GPIO_Port,TEMP4_GPIO_Port,TEMP5_GPIO_Port};
-uint16_t pins[5] = {TEMP1_Pin, TEMP2_Pin, TEMP3_Pin, TEMP4_Pin, TEMP5_Pin};
+GPIO_TypeDef * ports[5] = {TEMP2_GPIO_Port/*TEMP1_GPIO_Port*/,TEMP2_GPIO_Port,TEMP3_GPIO_Port,TEMP4_GPIO_Port,TEMP5_GPIO_Port};
+uint16_t pins[5] = {TEMP2_Pin/*TEMP1_Pin*/, TEMP2_Pin, TEMP3_Pin, TEMP4_Pin, TEMP5_Pin};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,6 +86,8 @@ void SystemClock_Config(void);
 void SystemClock_8MHz_Config(void);
 
 uint8_t GetHardwareID();
+
+void delay_us (uint16_t us);
 
 void  get_temp_reading();
 temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]);
@@ -122,10 +125,11 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
- // MX_GPIO_Init();
-  //MX_I2C1_Init();
-  //MX_USART1_UART_Init();
+  MX_GPIO_Init();
+  MX_I2C1_Init();
+  MX_USART1_UART_Init();
   //MX_CAN_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -138,14 +142,17 @@ int main(void)
 	MX_GPIO_Init();
 	MX_I2C1_Init();
 	MX_USART1_UART_Init();
-	MX_CAN_Init();
+	//MX_CAN_Init();
 
 	// Initialize CAN
-	Configure_CAN(&hcan);
+	//Configure_CAN(&hcan);
 
 	// both on to signify we vibing
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LED0_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+
+	// force temp soc to be high
+	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
 	// check BQ for faults
 	uint8_t sys_stat = 0;
@@ -196,6 +203,8 @@ int main(void)
 		Error_Handler();
 	}
 
+
+
 	// read BMS ID
 	uint8_t bms_id = GetHardwareID();
 
@@ -213,6 +222,8 @@ int main(void)
 	header.RTR = CAN_RTR_DATA;
 	header.TransmitGlobalTime = DISABLE;
 	temp_reading current_temp_reading = {0};
+
+	HAL_TIM_Base_Start(&htim3);
 
 	while (1) {
     /* USER CODE END WHILE */
@@ -374,21 +385,25 @@ void get_temp_reading() {
 		prev_state[i] = 0;
 	}
 
+	uint8_t value = 0;
+
 	// send pulse
 	// low
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
 	// 20us delay TODO: WITH TIMER
+	delay_us (50);
 
 	// high
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 	// 20us delay TODO: WITH TIMER
+	delay_us (5);
 
 	// low - start reading
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
 
-	bool break_loop = false;
-	uint8_t value = 0;
-	while(!break_loop)  {
+
+	while(1)  {
+		/*
 		if ((read_count[0] >= num_temp_readings[0])
 				&& (read_count[1] >= num_temp_readings[1] )
 				&& (read_count[2] >= num_temp_readings[2])
@@ -397,13 +412,18 @@ void get_temp_reading() {
 			break_loop = true;
 			break;
 		}
+		*/
+		if (read_count[0] >= num_temp_readings[0]) {
+			//break_loop = true;
+			break;
+		}
+		for (i = 0; i < 1; i++) {
+			value = HAL_GPIO_ReadPin(ports[i], pins[i]);
 
-		for (i = 0; i < 4; i++) {
 			if (read_count[i] >= num_temp_readings[i]) {
-				continue;
+							continue;
 			}
 
-			value = HAL_GPIO_ReadPin(ports[i], pins[i]);
 			if (value != prev_state[i]) {
 				// set to current time
 				// 1ms precision is fine for now, can do more precise later
@@ -423,14 +443,24 @@ temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]) {
 	temp_reading reading = {0};
 	int temp_num = 0;
 	for (int i = 0; i < 4; i++) {
-		for (int j = 0; j < num_temp_readings[i]; j++) {
+		int num_temp_vals = (num_temp_readings[i]-1)/2;
+		for (int j = 0; j < num_temp_vals; j++) {
 			long th = raw_readings[i].times[j*2+1] - raw_readings[i].times[j*2];
 			long tl = raw_readings[i].times[j*2+2] - raw_readings[i].times[j*2+1];
-			reading.temps[temp_num] = 421 - 751*(th/tl);
+			if (tl == 0 || th == 0) {
+				reading.temps[temp_num] = 0;
+			} else {
+				reading.temps[temp_num] = 421 - (751*((double)th/tl));
+			}
 			temp_num++;
 		}
 	}
 	return reading;
+}
+
+void delay_us (uint16_t us) {
+	__HAL_TIM_SET_COUNTER(&htim3,0);  // set the counter value a 0
+	while (__HAL_TIM_GET_COUNTER(&htim3) < us);  // wait for the counter to reach the us input in the parameter
 }
 
 /* USER CODE END 4 */
