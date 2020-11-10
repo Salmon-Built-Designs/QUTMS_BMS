@@ -39,19 +39,12 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-
-
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-
 #define N_CELLS	10
-
-
-
 
 // OVRD_ALERT, SCD, OCD
 #define SYS_STAT_FLAG_BITS 0b00010011
@@ -75,7 +68,6 @@ void SystemClock_Config(void);
 void SystemClock_8MHz_Config(void);
 
 uint8_t GetHardwareID();
-
 
 /* USER CODE END PFP */
 
@@ -117,9 +109,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
-
-
+	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
 	// bring out of shipping mode
 	// full clock speed
@@ -147,6 +137,56 @@ int main(void)
 
 	HAL_Delay(1000);
 
+	// check BQ for faults
+	uint8_t sys_stat = 0;
+	HAL_StatusTypeDef BQ_result = HAL_BUSY;
+
+	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
+
+	if (BQ_result != HAL_OK) {
+		// error, couldn't talk to BQ chip??
+		Error_Handler();
+	}
+
+	if ((sys_stat & SYS_STAT_FLAG_BITS) > 0) {
+		// fault pins are set whats the deal
+
+		// only clear pins we care about
+		sys_stat = sys_stat & SYS_STAT_FLAG_BITS;
+		BQ_result = bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT, sys_stat);
+
+		if (BQ_result != HAL_OK) {
+			// error, couldn't talk to BQ chip??
+			Error_Handler();
+		}
+
+		// confirm bits are cleared
+		BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
+
+		if ((BQ_result != HAL_OK) || (sys_stat & SYS_STAT_FLAG_BITS) != 0) {
+			// couldn't talk to BQ or bits are still set
+			Error_Handler();
+		}
+	}
+
+	// both off to signify we vibing
+	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED0_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+
+	// enable DSG
+	BQ_result = bq769x0_set_DSG(&hi2c1, 1);
+	if (BQ_result != HAL_OK) {
+		// error, couldn't talk to BQ chip??
+		Error_Handler();
+	}
+
+	// check fault pin to make sure we're all good before starting main procedure
+	if (HAL_GPIO_ReadPin(CELL_ALERT_GPIO_Port, CELL_ALERT_Pin)
+			!= GPIO_PIN_RESET) {
+		// pin is high whats going on
+		Error_Handler();
+	}
+
 	// read BMS ID
 	//uint8_t bms_id = GetHardwareID();
 
@@ -154,38 +194,39 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-/*
-	uint16_t group_voltages[4];
-	uint32_t txMailbox = 0;
-	BMS_TransmitVoltage_t voltage_msg;
-	BMS_TransmitTemperature_t temp_msg;
-	CAN_TxHeaderTypeDef header = {0};
-	header.IDE = CAN_ID_EXT;
-	header.RTR = CAN_RTR_DATA;
-	header.TransmitGlobalTime = DISABLE;
-	temp_reading current_temp_reading = {0};
-*/
+	/*
+	 uint16_t group_voltages[4];
+	 uint32_t txMailbox = 0;
+	 BMS_TransmitVoltage_t voltage_msg;
+	 BMS_TransmitTemperature_t temp_msg;
+	 CAN_TxHeaderTypeDef header = {0};
+	 header.IDE = CAN_ID_EXT;
+	 header.RTR = CAN_RTR_DATA;
+	 header.TransmitGlobalTime = DISABLE;
+	 temp_reading current_temp_reading = {0};
+	 */
 	HAL_Delay(100);
 	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 	HAL_TIM_Base_Start(&htim1);
 	HAL_Delay(100);
 	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 
-
-
-
 	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		 HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-		 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
-		 get_temp_reading();
+		get_temp_reading();
+		temp_reading result = parse_temp_readings(raw_temp_readings);
 
-		 HAL_UART_Transmit(&huart1, (uint8_t*)&num_readings[0], sizeof(uint8_t), HAL_MAX_DELAY);
-
-		//HAL_UART_Transmit(&huart1, &readings[0], 1, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart1, (uint8_t*) &num_readings[1], sizeof(uint8_t),
+		HAL_MAX_DELAY);
+		HAL_Delay(100);
+		for(int i = 0; i < NUM_TEMPS; i++) {
+			HAL_UART_Transmit(&huart1, &result.temps[i], 1, HAL_MAX_DELAY);
+		}
 
 		HAL_Delay(1000);
 
@@ -292,49 +333,6 @@ uint8_t GetHardwareID() {
 
 	return hardware_ID;
 }
-
-void delay_us (uint16_t us) {
-	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value to 0
-	while (__HAL_TIM_GET_COUNTER(&htim1) < us);  // wait for the counter to reach the us input in the parameter
-}
-
-
- void get_temp_reading() {
-	 num_readings[0] = 1;
-	 num_readings[1] = 1;
-	 num_readings[2] = 1;
-	 num_readings[3] = 1;
-
-	 // reset timer counts
-	 //__HAL_TIM_SET_COUNTER(&htim2,0);
-
-	 // set low
-	 HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
-	 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	 delay_us(10);
-
-	 // set high
-	 HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
-	 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	 delay_us(10);
-
-	 // set low - start reading
-	 HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
-	 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-
-	 // start channel interrupts
-	 HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
-	 raw_temp_readings[0].times[0] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_4);
-
-	 // delay till got all readings
-	 while (num_readings[0] < 9) {}
-
-	 // raise pin high to signify finished
-	 HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
-
-	 HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_4);
- }
-
 
 /* USER CODE END 4 */
 
