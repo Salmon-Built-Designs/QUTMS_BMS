@@ -15,6 +15,8 @@
 
 // TODO: match this to physical number correctly
 uint8_t num_temp_readings[4] = { 9, 7, 9, 7 };
+long read_temp[9];
+int temp_idx = 0;
 
 raw_temp_reading raw_temp_readings[4];
 
@@ -25,9 +27,11 @@ void Timer2_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 
 	} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
 		// temp2
+
 		//HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 	} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
 		// temp3
+
 	}
 }
 
@@ -39,13 +43,17 @@ void Timer3_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-	if (htim->Instance = TIM2) {
+	if (htim->Instance == TIM2) {
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
 			// temp1
 
 		} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
 			// temp2
 			//HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+			if (temp_idx < 9) {
+			read_temp[temp_idx] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+			temp_idx++;
+			}
 		} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
 			// temp3
 		}

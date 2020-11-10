@@ -54,4 +54,7 @@ void temp_sensor_init();
 void read_temperatures(uint8_t line);
 temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]);
 
+extern long read_temp[9];
+extern int temp_idx;
+
 #endif

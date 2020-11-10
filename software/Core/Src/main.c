@@ -135,14 +135,13 @@ int main(void)
 	//Configure_CAN(&hcan);
 
 	// both on to signify we vibing
-	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 
 	// force temp soc to be high
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
-	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+	HAL_Delay(1000);
 
 	// read BMS ID
 	uint8_t bms_id = GetHardwareID();
@@ -163,9 +162,11 @@ int main(void)
 	temp_reading current_temp_reading = {0};
 
 	HAL_Delay(100);
+	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 	HAL_TIM_Base_Start(&htim1);
 	HAL_Delay(100);
+	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 
 
@@ -201,7 +202,16 @@ int main(void)
 		// high
 		HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
-		HAL_Delay(2000);
+		HAL_Delay(1000);
+
+		HAL_UART_Transmit(&huart1, (uint8_t*)&temp_idx, sizeof(int), HAL_MAX_DELAY);
+
+
+		for(int i = 0; i < 9; i++) {
+			HAL_UART_Transmit(&huart1, (uint8_t*)&read_temp[i], sizeof(long), HAL_MAX_DELAY);
+		}
+
+		HAL_Delay(1000);
 	}
   /* USER CODE END 3 */
 }
