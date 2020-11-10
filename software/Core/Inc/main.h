@@ -76,14 +76,6 @@ void Error_Handler(void);
 #define LED0_GPIO_Port GPIOB
 #define LED1_Pin GPIO_PIN_15
 #define LED1_GPIO_Port GPIOB
-#define TEMP1_Pin GPIO_PIN_15
-#define TEMP1_GPIO_Port GPIOA
-#define TEMP3_Pin GPIO_PIN_3
-#define TEMP3_GPIO_Port GPIOB
-#define TEMP4_Pin GPIO_PIN_4
-#define TEMP4_GPIO_Port GPIOB
-#define TEMP5_Pin GPIO_PIN_5
-#define TEMP5_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
