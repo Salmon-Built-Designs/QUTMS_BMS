@@ -51,10 +51,12 @@ struct temp_reading {
 typedef struct temp_reading temp_reading;
 
 void temp_sensor_init();
-void read_temperatures(uint8_t line);
+void get_temp_reading();
 temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]);
+void delay_us (uint16_t us);
 
-extern long read_temp[9];
-extern int temp_idx;
+
+extern uint8_t num_readings[4];
+extern raw_temp_reading raw_temp_readings[4];
 
 #endif

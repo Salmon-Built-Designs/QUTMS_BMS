@@ -76,7 +76,6 @@ void SystemClock_8MHz_Config(void);
 
 uint8_t GetHardwareID();
 
-void delay_us (uint16_t us);
 
 /* USER CODE END PFP */
 
@@ -114,10 +113,11 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_USART1_UART_Init();
-  //MX_CAN_Init();
+ // MX_CAN_Init();
   MX_TIM2_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
 
 
@@ -140,17 +140,21 @@ int main(void)
 
 	// force temp soc to be high
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
+	HAL_Delay(10);
+	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
+	HAL_Delay(10);
+	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
 	HAL_Delay(1000);
 
 	// read BMS ID
-	uint8_t bms_id = GetHardwareID();
+	//uint8_t bms_id = GetHardwareID();
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
+/*
 	uint16_t group_voltages[4];
 	uint32_t txMailbox = 0;
 	BMS_TransmitVoltage_t voltage_msg;
@@ -160,56 +164,33 @@ int main(void)
 	header.RTR = CAN_RTR_DATA;
 	header.TransmitGlobalTime = DISABLE;
 	temp_reading current_temp_reading = {0};
-
+*/
 	HAL_Delay(100);
-	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 	HAL_TIM_Base_Start(&htim1);
 	HAL_Delay(100);
-	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+
+
 
 
 	while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+		 HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+		 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
-		bms_id = GetHardwareID();
-		HAL_UART_Transmit(&huart1, &bms_id, 1, HAL_MAX_DELAY);
+		 get_temp_reading();
 
-		HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
-		// 20us delay TODO: WITH TIMER
-		delay_us(15);
+		 HAL_UART_Transmit(&huart1, (uint8_t*)&num_readings[0], sizeof(uint8_t), HAL_MAX_DELAY);
 
-		// high
-		HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
-		// 20us delay TODO: WITH TIMER
-		delay_us(5);
-
-		// low - start reading
-		HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
-
-		HAL_Delay(200);
-
-		HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+		//HAL_UART_Transmit(&huart1, &readings[0], 1, HAL_MAX_DELAY);
 
 		HAL_Delay(1000);
 
-		// high
-		HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
-
-		HAL_Delay(1000);
-
-		HAL_UART_Transmit(&huart1, (uint8_t*)&temp_idx, sizeof(int), HAL_MAX_DELAY);
-
-
-		for(int i = 0; i < 9; i++) {
-			HAL_UART_Transmit(&huart1, (uint8_t*)&read_temp[i], sizeof(long), HAL_MAX_DELAY);
-		}
+		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
 		HAL_Delay(1000);
 	}
@@ -312,14 +293,48 @@ uint8_t GetHardwareID() {
 	return hardware_ID;
 }
 
-
-
-
-
 void delay_us (uint16_t us) {
 	__HAL_TIM_SET_COUNTER(&htim1,0);  // set the counter value to 0
 	while (__HAL_TIM_GET_COUNTER(&htim1) < us);  // wait for the counter to reach the us input in the parameter
 }
+
+
+ void get_temp_reading() {
+	 num_readings[0] = 1;
+	 num_readings[1] = 1;
+	 num_readings[2] = 1;
+	 num_readings[3] = 1;
+
+	 // reset timer counts
+	 //__HAL_TIM_SET_COUNTER(&htim2,0);
+
+	 // set low
+	 HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
+	 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	 delay_us(10);
+
+	 // set high
+	 HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
+	 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	 delay_us(10);
+
+	 // set low - start reading
+	 HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
+	 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+
+	 // start channel interrupts
+	 HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
+	 raw_temp_readings[0].times[0] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_4);
+
+	 // delay till got all readings
+	 while (num_readings[0] < 9) {}
+
+	 // raise pin high to signify finished
+	 HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
+
+	 HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_4);
+ }
+
 
 /* USER CODE END 4 */
 

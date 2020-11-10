@@ -15,48 +15,28 @@
 
 // TODO: match this to physical number correctly
 uint8_t num_temp_readings[4] = { 9, 7, 9, 7 };
-long read_temp[9];
-int temp_idx = 0;
-
+uint8_t num_readings[4];
 raw_temp_reading raw_temp_readings[4];
 
-void Timer2_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-		// temp1
-
-	} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
-		// temp2
-
-		//HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-	} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
-		// temp3
-
-	}
-}
-
-void Timer3_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-		// temp4
-	}
-}
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-	if (htim->Instance == TIM2) {
+	//HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+	/*if (htim->Instance == TIM2) {
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
 			// temp1
 
-		} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
+		} else*/ if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) {
 			// temp2
 			//HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-			if (temp_idx < 9) {
-			read_temp[temp_idx] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
-			temp_idx++;
+			if (num_readings[0] < 9) {
+				raw_temp_readings[0].times[num_readings[0]] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4);
+				num_readings[0]++;
 			}
+			//__HAL_TIM_SET_COUNTER(&htim2,0);
+			/*
 		} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
 			// temp3
-		}
+		}*/
 	}
 }
 
@@ -81,65 +61,12 @@ temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]) {
 				reading.temps[temp_num] = 421 - (751 * ((double) th / tl));
 			}
 			temp_num++;
+
 		}
 	}
 	return reading;
 }
 
-/*
- void get_temp_reading() {
- memset(raw_temp_readings, 0, sizeof(raw_temp_reading)*4);
-
- uint8_t read_count[4];
- uint8_t prev_state[4];
- int i = 0;
- for(i = 0; i < 4; i++) {
- read_count[i] = 0;
- // set prev state to start at LOW so first iteration records time
- prev_state[i] = 0;
- }
-
- uint8_t value = 0;
-
- // send pulse
- // low
- HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
- // 20us delay TODO: WITH TIMER
- delay_us (50);
-
- // high
- HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
- // 20us delay TODO: WITH TIMER
- delay_us (5);
-
- // low - start reading
- HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
 
 
- while(1)  {
- if (read_count[0] >= num_temp_readings[0]) {
- //break_loop = true;
- break;
- }
- for (i = 0; i < 1; i++) {
- value = HAL_GPIO_ReadPin(ports[i], pins[i]);
 
- if (read_count[i] >= num_temp_readings[i]) {
- continue;
- }
-
- if (value != prev_state[i]) {
- // set to current time
- // 1ms precision is fine for now, can do more precise later
- raw_temp_readings[i].times[read_count[i]] = HAL_GetTick();
- read_count[i]++;
- prev_state[i] = value;
- }
- }
- }
-
- // pull pin high again
- HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
-
- }
- */
