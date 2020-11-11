@@ -10,8 +10,8 @@
 
 #include "main.h"
 
-#define NUM_READINGS 9
-#define NUM_TEMPS 12
+#define MAX_NUM_READINGS 9
+#define NUM_TEMPS 13
 
 // GPIO DEFINES
 #define TEMP1_PORT GPIOA
@@ -39,7 +39,7 @@ enum temp_lines {
 
 
 struct raw_temp_reading {
-	long times[NUM_READINGS];
+	long times[MAX_NUM_READINGS];
 };
 
 typedef struct raw_temp_reading raw_temp_reading;

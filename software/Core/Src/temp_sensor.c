@@ -14,7 +14,7 @@
 //		TEMP5_Pin };
 
 // TODO: match this to physical number correctly
-uint8_t num_temp_readings[4] = { 7, 9, 7, 9 };
+uint8_t num_temp_readings[4] = { 7, 9, 7, 7 };
 uint8_t num_readings[4];
 raw_temp_reading raw_temp_readings[4];
 
@@ -52,7 +52,18 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 				num_readings[TEMP_LINE_3]++;
 			}
 		}
+	} else if (htim->Instance == TIM3) {
+		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+					// temp1
+					if (num_readings[TEMP_LINE_4] < num_temp_readings[TEMP_LINE_4]) {
+						raw_temp_readings[TEMP_LINE_4].times[num_readings[TEMP_LINE_4]] =
+								channel1;
+						num_readings[TEMP_LINE_4]++;
+					}
+
+				}
 	}
+
 }
 
 void temp_sensor_init() {
@@ -111,12 +122,15 @@ void get_temp_reading() {
 	HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
 	// start channel interrupts
+	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
+	HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
 	//raw_temp_readings[TEMP_LINE_1].times[TEMP_LINE_1] =	HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
 	raw_temp_readings[TEMP_LINE_1].times[0] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
 	raw_temp_readings[TEMP_LINE_2].times[0] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_4);
 	raw_temp_readings[TEMP_LINE_3].times[0] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_2);
+	raw_temp_readings[TEMP_LINE_4].times[0] = HAL_TIM_ReadCapturedValue(&htim3, TIM_CHANNEL_1);
 
 
 	// delay till got all readings
@@ -128,7 +142,9 @@ void get_temp_reading() {
 	// raise pin high to signify finished
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
+	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_4);
 	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
+	HAL_TIM_IC_Stop_IT(&htim3, TIM_CHANNEL_1);
 }
 
