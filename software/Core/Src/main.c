@@ -77,39 +77,38 @@ uint8_t GetHardwareID();
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
-  /* USER CODE BEGIN 1 */
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-  /* USER CODE END SysInit */
+	/* USER CODE BEGIN SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_I2C1_Init();
-  MX_USART1_UART_Init();
- // MX_CAN_Init();
-  MX_TIM2_Init();
-  MX_TIM1_Init();
-  MX_TIM3_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_I2C1_Init();
+	MX_USART1_UART_Init();
+	// MX_CAN_Init();
+	MX_TIM2_Init();
+	MX_TIM1_Init();
+	MX_TIM3_Init();
+	/* USER CODE BEGIN 2 */
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
 	// bring out of shipping mode
@@ -120,10 +119,6 @@ int main(void)
 	MX_GPIO_Init();
 	MX_I2C1_Init();
 	MX_USART1_UART_Init();
-	//MX_CAN_Init();
-
-	// Initialize CAN
-	//Configure_CAN(&hcan);
 
 	// both on to signify we vibing
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
@@ -148,6 +143,20 @@ int main(void)
 		// error, couldn't talk to BQ chip??
 		Error_Handler();
 	}
+
+	uint16_t UV = 2000;
+
+	if (bq769x0_set_under_voltage(&hi2c1, UV) != HAL_OK) {
+		Error_Handler();
+	}
+
+	uint16_t OV = 3700;
+
+	if (bq769x0_set_over_voltage(&hi2c1, OV) != HAL_OK) {
+		Error_Handler();
+	}
+
+	// set over voltage and under voltage
 
 	if ((sys_stat & SYS_STAT_FLAG_BITS) > 0) {
 		// fault pins are set whats the deal
@@ -191,10 +200,15 @@ int main(void)
 	// read BMS ID
 	uint8_t bms_id = GetHardwareID();
 
-  /* USER CODE END 2 */
+	MX_CAN_Init();
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	// Initialize CAN
+	Configure_CAN(&hcan);
+
+	/* USER CODE END 2 */
+
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 
 	uint16_t group_voltages[4];
 	uint32_t txMailbox = 0;
@@ -213,9 +227,9 @@ int main(void)
 	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 
 	while (1) {
-    /* USER CODE END WHILE */
+		/* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
@@ -229,7 +243,7 @@ int main(void)
 		HAL_Delay(100);
 		for (int i = 0; i < NUM_TEMPS; i++) {
 			HAL_UART_Transmit(&huart1, &current_temp_reading.temps[i], 1,
-					HAL_MAX_DELAY);
+			HAL_MAX_DELAY);
 		}
 
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
@@ -242,14 +256,14 @@ int main(void)
 				&current_temp_reading.temps[0]);
 		header.ExtId = temp_msg.id;
 		header.DLC = sizeof(temp_msg.data);
-		//HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
+		HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
 
 		// send temp block 2
 		temp_msg = Compose_BMS_TransmitTemperature(bms_id, 1,
 				&current_temp_reading.temps[6]);
 		header.ExtId = temp_msg.id;
 		header.DLC = sizeof(temp_msg.data);
-		//HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
+		HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
 
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
@@ -270,49 +284,46 @@ int main(void)
 
 		}
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+	RCC_PeriphCLKInitTypeDef PeriphClkInit = { 0 };
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV8;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		Error_Handler();
+	}
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV8;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_I2C1;
-  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
-  PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
+		Error_Handler();
+	}
+	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1
+			| RCC_PERIPHCLK_I2C1;
+	PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
+	PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
+		Error_Handler();
+	}
 }
 
 /* USER CODE BEGIN 4 */
@@ -372,12 +383,11 @@ uint8_t GetHardwareID() {
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+	/* USER CODE BEGIN Error_Handler_Debug */
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);
 	HAL_Delay(100);
@@ -387,7 +397,7 @@ void Error_Handler(void)
 	while (1) {
 		HAL_Delay(100);
 	}
-  /* USER CODE END Error_Handler_Debug */
+	/* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
