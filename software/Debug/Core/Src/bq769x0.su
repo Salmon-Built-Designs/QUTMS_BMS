@@ -8,3 +8,8 @@ bq769x0.c:151:19:bq769x0_read_pack_voltage	40	static
 bq769x0.c:183:19:bq769x0_set_under_voltage	24	static
 bq769x0.c:195:19:bq769x0_set_over_voltage	24	static
 bq769x0.c:207:19:bq769x0_set_DSG	32	static
+bq769x0.c:226:19:bq769x0_set_CHG	32	static
+bq769x0.c:245:19:bq769x0_set_CC_mode	32	static
+bq769x0.c:270:19:bq769x0_read_CC	32	static
+bq769x0.c:306:19:bq769x0_set_cell_balancing	32	static
+bq769x0.c:339:19:bq769x0_reset_cell_balancing	32	static

@@ -33,11 +33,11 @@ void MX_CAN_Init(void)
 {
 
   hcan.Instance = CAN;
-  hcan.Init.Prescaler = 48;
+  hcan.Init.Prescaler = 1;
   hcan.Init.Mode = CAN_MODE_LOOPBACK;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan.Init.TimeSeg1 = CAN_BS1_9TQ;
-  hcan.Init.TimeSeg2 = CAN_BS2_8TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = DISABLE;
   hcan.Init.AutoWakeUp = DISABLE;
@@ -105,6 +105,41 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+void Configure_CAN(CAN_HandleTypeDef* canHandle) {
+	CAN_FilterTypeDef sFilterConfig;
+
+	// only want to accept messages from the AMS
+
+	/* Configure the CAN Filter */
+	sFilterConfig.FilterBank = 0;
+	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+
+	// what bits of the CAN ID do we care about
+	sFilterConfig.FilterMaskIdHigh = 0;
+	sFilterConfig.FilterMaskIdLow = 0;
+
+	// what values do we want
+	sFilterConfig.FilterIdHigh = 0;
+	sFilterConfig.FilterIdLow = 0;
+
+	sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+	sFilterConfig.FilterActivation = ENABLE;
+	sFilterConfig.SlaveStartFilterBank = 14;
+
+	if(HAL_CAN_ConfigFilter(&hcan, &sFilterConfig)
+			!= HAL_OK) Error_Handler();
+
+	/* Start the CAN peripheral */
+	if(HAL_CAN_Start(&hcan) != HAL_OK)
+		Error_Handler();
+
+	/* Activate CAN RX Notification */
+	if(HAL_CAN_ActivateNotification(&hcan,
+			CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+		Error_Handler();
+}
 
 /* USER CODE END 1 */
 

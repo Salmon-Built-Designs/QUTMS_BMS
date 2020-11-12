@@ -217,7 +217,7 @@ HAL_StatusTypeDef bq769x0_set_DSG(I2C_HandleTypeDef *hi2c, uint8_t value) {
 	currentReg &= ~(1<<1);
 
 	// set DSG VALUE
-	currentReg |= ((1<<1) & value);
+	currentReg |= ((1 & value) << 1);
 
 	// write back to register
 	return bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL2, currentReg);
@@ -236,7 +236,7 @@ HAL_StatusTypeDef bq769x0_set_CHG(I2C_HandleTypeDef *hi2c, uint8_t value) {
 	currentReg &= ~(1<<0);
 
 	// set CHG VALUE
-	currentReg |= ((1<<0) & value);
+	currentReg |= ((1 & value) << 0);
 
 	// write back to register
 	return bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL2, currentReg);

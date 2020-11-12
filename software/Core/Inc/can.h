@@ -40,6 +40,8 @@ void MX_CAN_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
+void Configure_CAN(CAN_HandleTypeDef* canHandle);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

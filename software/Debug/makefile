@@ -46,8 +46,8 @@ QUTMS_BMS.bin \
 all: QUTMS_BMS.elf secondary-outputs
 
 # Tool invocations
-QUTMS_BMS.elf: $(OBJS) $(USER_OBJS) C:\Users\calvi\OneDrive\ -\ Queensland\ University\ of\ Technology\QUTMS\QEV3\Github\QUTMS_BMS\software\STM32F042C6TX_FLASH.ld
-	arm-none-eabi-gcc -o "QUTMS_BMS.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Users\calvi\OneDrive - Queensland University of Technology\QUTMS\QEV3\Github\QUTMS_BMS\software\STM32F042C6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="QUTMS_BMS.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+QUTMS_BMS.elf: $(OBJS) $(USER_OBJS) C:\Users\Motorsports\Desktop\git\QUTMS_BMS\software\STM32F042C6TX_FLASH.ld
+	arm-none-eabi-gcc -o "QUTMS_BMS.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Users\Motorsports\Desktop\git\QUTMS_BMS\software\STM32F042C6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="QUTMS_BMS.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
