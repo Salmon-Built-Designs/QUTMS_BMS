@@ -66,4 +66,7 @@ HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c,
 		uint8_t cell_num, uint8_t state);
 
 
+HAL_StatusTypeDef bq769x0_enter_shipping_mode(I2C_HandleTypeDef *hi2c);
+
+
 #endif /* INC_BQ769X0_H_ */

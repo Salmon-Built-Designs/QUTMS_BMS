@@ -160,18 +160,19 @@ HAL_StatusTypeDef bq769x0_read_voltage_group(I2C_HandleTypeDef *hi2c,
 		num_cells = 2;
 	}
 
-	HAL_StatusTypeDef ret = bq769x0_reg_read_bytes(hi2c, start_reg, buffer, num_cells*2);
+	HAL_StatusTypeDef ret = bq769x0_reg_read_bytes(hi2c, start_reg, buffer,
+			num_cells * 2);
 	if (ret != HAL_OK) {
 		return ret;
 	}
 
-
-	memset(voltages, 0, sizeof(uint16_t)*4);
+	memset(voltages, 0, sizeof(uint16_t) * 4);
 
 	uint16_t adc_value = 0;
 	for (int i = 0; i < num_cells; i++) {
-		adc_value = ((buffer[i*2] & 0b00111111) << 8) | buffer[i*2 + 1];
-		voltages[i] = adc_value * (365 + adc_voltage_gain) / 1000 + adc_voltage_offset;
+		adc_value = ((buffer[i * 2] & 0b00111111) << 8) | buffer[i * 2 + 1];
+		voltages[i] = adc_value * (365 + adc_voltage_gain) / 1000
+				+ adc_voltage_offset;
 	}
 
 	return HAL_OK;
@@ -375,3 +376,33 @@ HAL_StatusTypeDef bq769x0_reset_cell_balancing(I2C_HandleTypeDef *hi2c) {
 
 }
 
+HAL_StatusTypeDef bq769x0_enter_shipping_mode(I2C_HandleTypeDef *hi2c) {
+	// get current value of register
+
+	uint8_t cur_value = 0;
+	HAL_StatusTypeDef res = bq769x0_reg_read_byte(hi2c, BQ_SYS_CTRL1,
+			&cur_value);
+
+	if (res != HAL_OK) {
+		return res;
+	}
+
+	cur_value &= ~(0b11);
+	// SHUT_A = 0, SHUT_B = 1
+	cur_value |= 0b01;
+
+	res = bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL1, cur_value);
+
+	if (res != HAL_OK) {
+		return res;
+	}
+
+	cur_value &= ~(0b11);
+	// SHUT_A = 1, SHUT_B = 0
+	cur_value |= 0b10;
+
+	// this turns the power off lmfao
+	res = bq769x0_reg_write_byte(hi2c, BQ_SYS_CTRL1, cur_value);
+
+	return res;
+}
