@@ -35,7 +35,7 @@ void MX_CAN_Init(void)
 
   hcan.Instance = CAN;
   hcan.Init.Prescaler = 1;
-  hcan.Init.Mode = CAN_MODE_LOOPBACK;
+  hcan.Init.Mode = CAN_MODE_NORMAL;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
   hcan.Init.TimeSeg2 = CAN_BS2_2TQ;
@@ -117,12 +117,12 @@ void Configure_CAN(CAN_HandleTypeDef* canHandle) {
 	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
 
 	// what bits of the CAN ID do we care about
-	sFilterConfig.FilterMaskIdHigh = (CAN_MASK_SRC_ID & 0xFFFF) >> (16 - 3);
-	sFilterConfig.FilterMaskIdLow = (CAN_MASK_SRC_ID & 0xFFFF) << 3;
+	sFilterConfig.FilterMaskIdHigh = (CAN_MASK_SRC_ID & 0xFFFF) >> (16);
+	sFilterConfig.FilterMaskIdLow = (CAN_MASK_SRC_ID & 0xFFFF);
 
 	// what values do we want
-	sFilterConfig.FilterIdHigh = (CAN_SRC_ID_BMS & 0xFFFF) >> (16 - 3);
-	sFilterConfig.FilterIdLow = (CAN_SRC_ID_BMS & 0xFFFF) << 3;
+	sFilterConfig.FilterIdHigh = (CAN_SRC_ID_AMS & 0xFFFF) >> (16);
+	sFilterConfig.FilterIdLow = (CAN_SRC_ID_AMS & 0xFFFF);
 
 	sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
 	sFilterConfig.FilterActivation = ENABLE;

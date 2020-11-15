@@ -62,6 +62,8 @@ void Error_Handler(void);
 #define TEMP2_GPIO_Port GPIOA
 #define TEMP_SOC_Pin GPIO_PIN_4
 #define TEMP_SOC_GPIO_Port GPIOA
+#define nALARM_Pin GPIO_PIN_5
+#define nALARM_GPIO_Port GPIOA
 #define ID0_Pin GPIO_PIN_0
 #define ID0_GPIO_Port GPIOB
 #define ID1_Pin GPIO_PIN_1

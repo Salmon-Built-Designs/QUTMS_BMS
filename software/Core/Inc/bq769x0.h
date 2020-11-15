@@ -32,6 +32,9 @@
 #define BQ_CELLBAL1 0x01
 #define BQ_CELLBAL2 0x02
 
+#define BQ_SYS_UV 0b00001000
+#define BQ_SYS_OV 0b00000100
+
 // structs
 
 // variables

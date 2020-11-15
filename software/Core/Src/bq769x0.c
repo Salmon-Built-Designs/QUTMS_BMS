@@ -233,7 +233,7 @@ HAL_StatusTypeDef bq769x0_set_over_voltage(I2C_HandleTypeDef *hi2c,
 
 	uint16_t OV_TRIP_FULL = (over_voltage - adc_voltage_offset)
 			/ adc_voltage_gain;
-	uint8_t OV_TRIP = ((OV_TRIP_FULL >> 4) & 0b11111111);
+	uint8_t OV_TRIP = ((OV_TRIP_FULL >> 4) & 0b0011111111);
 
 	return bq769x0_reg_write_byte(hi2c, BQ_OV_TRIP, OV_TRIP);
 }
