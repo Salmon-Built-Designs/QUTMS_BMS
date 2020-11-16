@@ -217,8 +217,8 @@ HAL_StatusTypeDef bq769x0_set_under_voltage(I2C_HandleTypeDef *hi2c,
 				&adc_voltage_offset);
 	}
 
-	uint16_t UV_TRIP_FULL = (under_voltage - adc_voltage_offset)
-			/ adc_voltage_gain;
+	uint16_t UV_TRIP_FULL = (float)(under_voltage - adc_voltage_offset)
+			/ (float)adc_voltage_gain;
 	uint8_t UV_TRIP = ((UV_TRIP_FULL >> 4) & 0b11111111);
 
 	return bq769x0_reg_write_byte(hi2c, BQ_UV_TRIP, UV_TRIP);
@@ -231,8 +231,8 @@ HAL_StatusTypeDef bq769x0_set_over_voltage(I2C_HandleTypeDef *hi2c,
 				&adc_voltage_offset);
 	}
 
-	uint16_t OV_TRIP_FULL = (over_voltage - adc_voltage_offset)
-			/ adc_voltage_gain;
+	uint16_t OV_TRIP_FULL = (float)(over_voltage - adc_voltage_offset)
+			/ (float)adc_voltage_gain;
 	uint8_t OV_TRIP = ((OV_TRIP_FULL >> 4) & 0b0011111111);
 
 	return bq769x0_reg_write_byte(hi2c, BQ_OV_TRIP, OV_TRIP);

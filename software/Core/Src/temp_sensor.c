@@ -109,7 +109,7 @@ temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]) {
 
 void delay_us(uint16_t us) {
 	__HAL_TIM_SET_COUNTER(&htim1, 0);  // set the counter value to 0
-	while (__HAL_TIM_GET_COUNTER(&htim1) < us) {
+	while (__HAL_TIM_GET_COUNTER(&htim1) < (us)) {
 	}  // wait for the counter to reach the us input in the parameter
 }
 
@@ -118,6 +118,8 @@ void get_temp_reading() {
 	memset(raw_temp_readings[TEMP_LINE_4].times, 0,
 			sizeof(long) * MAX_NUM_READINGS);
 
+	HAL_TIM_Base_Start(&htim1);
+
 	num_readings[0] = 1;
 	num_readings[1] = 1;
 	num_readings[2] = 1;
@@ -125,17 +127,19 @@ void get_temp_reading() {
 
 	// set low
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	delay_us(10);
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+	delay_us(20);
 
 	// set high
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
-	HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	delay_us(10);
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+	//HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	delay_us(20);
 
 	// set low - start reading
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+	//HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
 	// start channel interrupts
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
