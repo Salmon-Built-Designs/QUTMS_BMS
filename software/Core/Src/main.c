@@ -126,14 +126,6 @@ int main(void) {
 	HAL_StatusTypeDef BQ_result = HAL_BUSY;
 	uint8_t sys_stat = 0;
 
-	for (int i = 0; i < 3; i++) {
-		// read voltages for debugging
-		BQ_result = bq769x0_read_voltage_group(&hi2c1, i, group_voltages);
-		if (BQ_result != HAL_OK) {
-			Error_Handler();
-		}
-	}
-
 	// read BMS ID
 	uint8_t bms_id = GetHardwareID();
 
@@ -163,6 +155,10 @@ int main(void) {
 
 	HAL_Delay(1000);
 
+	// initialize CAN
+	MX_CAN_Init();
+	Configure_CAN(&hcan);
+
 	while (1) {
 		/* USER CODE END WHILE */
 
@@ -187,10 +183,6 @@ int main(void) {
 
 			if (sys_stat & BQ_SYS_OV) {
 				// OVER VOLTAGE
-				value = 'v';
-				HAL_UART_Transmit(&huart1, (uint8_t*) &value, sizeof(char),
-				HAL_MAX_DELAY);
-
 				// send error message
 				voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id, 0, 0);
 				header.ExtId = voltage_error_msg.id;
@@ -222,13 +214,10 @@ int main(void) {
 			CAN_count_between_heartbeats = 0;  // reset CAN heartbeat timer
 		}
 
-		//get_temp_reading();
-		HAL_Delay(500); // simulate temp_reading
+		get_temp_reading();
+		//HAL_Delay(500); // simulate temp_reading
 		current_temp_reading = parse_temp_readings(raw_temp_readings);
 
-		HAL_UART_Transmit(&huart1, (uint8_t*) &num_readings[1], sizeof(uint8_t),
-		HAL_MAX_DELAY);
-		HAL_Delay(100);
 		for (int i = 0; i < NUM_TEMPS; i++) {
 			HAL_UART_Transmit(&huart1, &current_temp_reading.temps[i], 1,
 			HAL_MAX_DELAY);
@@ -262,7 +251,7 @@ int main(void) {
 			}
 
 			uint8_t idx = i;
-			HAL_UART_Transmit(&huart1, &idx, 1,	HAL_MAX_DELAY);
+			HAL_UART_Transmit(&huart1, &idx, 1, HAL_MAX_DELAY);
 
 			for (int j = 0; j < 4; j++) {
 				uint8_t volt = (float) group_voltages[j] / 100;
@@ -277,6 +266,7 @@ int main(void) {
 			HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 
 		}
+
 	}
 	/* USER CODE END 3 */
 }
@@ -371,38 +361,35 @@ uint8_t GetHardwareID() {
 }
 
 uint8_t startup_procedure() {
+	// force temp soc to be high
+	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
+
 	// turn both LEDs off for debugging (auto go on from GPIO init)
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-
-	uint8_t bqpower = HAL_GPIO_ReadPin(BQ_POWER_GPIO_Port, BQ_POWER_Pin);
-	//HAL_UART_Transmit(&huart1, &bqpower, sizeof(uint8_t), HAL_MAX_DELAY);
-
-	// wait a second to fizzle up
-	HAL_Delay(1000);
 
 	// check BQ chip
 	HAL_StatusTypeDef BQ_result = HAL_BUSY;
 	uint8_t sys_stat = 0;
 
-	// get initial sys_stat register
-	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
-	if (BQ_result != HAL_OK) {
-		// error, couldn't talk to BQ chip??
+	// set under and over voltage
+	uint16_t voltage_limit = UNDER_VOLTAGE;
+	if (bq769x0_set_under_voltage(&hi2c1, voltage_limit) != HAL_OK) {
 		Error_Handler();
 	}
-	HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
-	// set over and under voltage
-	uint16_t voltage_limit = OVER_VOLTAGE;
+	voltage_limit = OVER_VOLTAGE;
 	if (bq769x0_set_over_voltage(&hi2c1, voltage_limit) != HAL_OK) {
 		Error_Handler();
 	}
 
-	voltage_limit = UNDER_VOLTAGE;
-	if (bq769x0_set_under_voltage(&hi2c1, voltage_limit) != HAL_OK) {
+	// get initial sys_stat register
+	if (bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat) != HAL_OK) {
+		// error, couldn't talk to BQ chip??
 		Error_Handler();
 	}
+
+	HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
 	// check value from sys_stat
 	// do this after setting over and under voltage
@@ -410,18 +397,21 @@ uint8_t startup_procedure() {
 	if ((sys_stat & SYS_STAT_FLAG_BITS) > 0) {
 		// error has been detected potentially
 
-		// reset active errors
+		// clear read cycle to phase out old values
 		sys_stat = sys_stat & SYS_STAT_FLAG_BITS;
-		if (bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT, sys_stat) != HAL_OK) {
-			// error, couldn't talk to BQ chip??
-			Error_Handler();
-		}
+		bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT, sys_stat);
+		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
-		// small delay to let the BQ chip redetect
-		HAL_Delay(100);
+		bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
+		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
-		// read updated sys_stat
-		BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
+		// clear and read final register values
+
+		sys_stat = sys_stat & SYS_STAT_FLAG_BITS;
+		bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT, sys_stat);
+		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
+
+		bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
 		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
 		if ((BQ_result != HAL_OK) || (sys_stat & SYS_STAT_FLAG_BITS) != 0) {
@@ -442,23 +432,18 @@ uint8_t startup_procedure() {
 		Error_Handler();
 	}
 
-	bqpower = HAL_GPIO_ReadPin(BQ_POWER_GPIO_Port, BQ_POWER_Pin);
-	//HAL_UART_Transmit(&huart1, &bqpower, sizeof(uint8_t), HAL_MAX_DELAY);
-
-	// go to full clock speed
+	// full clock speed
 	SystemClock_8MHz_Config();
 
-	// reconfigure peripherals to use higher clock speed
 	MX_GPIO_Init();
 	MX_I2C1_Init();
 	MX_USART1_UART_Init();
-	MX_TIM1_Init();
 	MX_TIM2_Init();
+	MX_TIM1_Init();
 	MX_TIM3_Init();
-	MX_CAN_Init();
 
-	// initialize CAN
-	Configure_CAN(&hcan);
+	//bqpower = HAL_GPIO_ReadPin(BQ_POWER_GPIO_Port, BQ_POWER_Pin);
+	//HAL_UART_Transmit(&huart1, &bqpower, sizeof(uint8_t), HAL_MAX_DELAY);
 
 	// everything is fine
 	return 1;

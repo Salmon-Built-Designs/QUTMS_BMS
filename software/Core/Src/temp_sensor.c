@@ -29,8 +29,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
 			// temp1
 			if (num_readings[TEMP_LINE_1] < num_temp_readings[TEMP_LINE_1]) {
-				raw_temp_readings[TEMP_LINE_1].times[num_readings[TEMP_LINE_1]] =
-						channel1;
+				raw_temp_readings[TEMP_LINE_1].times[num_readings[TEMP_LINE_1]] = channel1;
 				num_readings[TEMP_LINE_1]++;
 			}
 
@@ -38,8 +37,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 			// temp2
 			//HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 			if (num_readings[TEMP_LINE_2] < num_temp_readings[TEMP_LINE_2]) {
-				raw_temp_readings[TEMP_LINE_2].times[num_readings[TEMP_LINE_2]] =
-						channel4;
+				raw_temp_readings[TEMP_LINE_2].times[num_readings[TEMP_LINE_2]] = channel4;
 				num_readings[TEMP_LINE_2]++;
 			}
 			//__HAL_TIM_SET_COUNTER(&htim2,0);
@@ -47,8 +45,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 		} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
 			// temp3
 			if (num_readings[TEMP_LINE_3] < num_temp_readings[TEMP_LINE_3]) {
-				raw_temp_readings[TEMP_LINE_3].times[num_readings[TEMP_LINE_3]] =
-						channel2;
+				raw_temp_readings[TEMP_LINE_3].times[num_readings[TEMP_LINE_3]] = channel2;
 				num_readings[TEMP_LINE_3]++;
 			}
 		}
@@ -56,12 +53,10 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
 			// temp1
 			if (num_readings[TEMP_LINE_4] < num_temp_readings[TEMP_LINE_4]) {
-				raw_temp_readings[TEMP_LINE_4].times[num_readings[TEMP_LINE_4]] +=
-						channel1;
+				raw_temp_readings[TEMP_LINE_4].times[num_readings[TEMP_LINE_4]] += channel1;
 				//uint32_t timer_value = __HAL_TIM_GET_COUNTER(&htim3);
 				num_readings[TEMP_LINE_4]++;
-				if (num_readings[TEMP_LINE_4]
-						< num_temp_readings[TEMP_LINE_4]) {
+				if (num_readings[TEMP_LINE_4] < num_temp_readings[TEMP_LINE_4]) {
 					//raw_temp_readings[TEMP_LINE_4].times[num_readings[TEMP_LINE_4]] =	timer_value;
 					__HAL_TIM_SET_COUNTER(&htim3, 0);
 				}
@@ -90,10 +85,8 @@ temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]) {
 				th = raw_readings[i].times[j * 2 + 1];
 				tl = raw_readings[i].times[j * 2 + 2];
 			} else {
-				th = raw_readings[i].times[j * 2 + 1]
-						- raw_readings[i].times[j * 2];
-				tl = raw_readings[i].times[j * 2 + 2]
-						- raw_readings[i].times[j * 2 + 1];
+				th = raw_readings[i].times[j * 2 + 1] - raw_readings[i].times[j * 2];
+				tl = raw_readings[i].times[j * 2 + 2] - raw_readings[i].times[j * 2 + 1];
 			}
 			if (tl == 0 || th == 0) {
 				reading.temps[temp_num] = 0;
@@ -115,8 +108,7 @@ void delay_us(uint16_t us) {
 
 void get_temp_reading() {
 	// clear temp 4 to be all 0s since we'll be fiddling with it
-	memset(raw_temp_readings[TEMP_LINE_4].times, 0,
-			sizeof(long) * MAX_NUM_READINGS);
+	memset(raw_temp_readings[TEMP_LINE_4].times, 0, sizeof(long) * MAX_NUM_READINGS);
 
 	HAL_TIM_Base_Start(&htim1);
 
@@ -146,15 +138,10 @@ void get_temp_reading() {
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
-	//raw_temp_readings[TEMP_LINE_1].times[TEMP_LINE_1] =	HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-	raw_temp_readings[TEMP_LINE_1].times[0] = HAL_TIM_ReadCapturedValue(&htim2,
-	TIM_CHANNEL_1);
-	raw_temp_readings[TEMP_LINE_2].times[0] = HAL_TIM_ReadCapturedValue(&htim2,
-	TIM_CHANNEL_4);
-	raw_temp_readings[TEMP_LINE_3].times[0] = HAL_TIM_ReadCapturedValue(&htim2,
-	TIM_CHANNEL_2);
-	raw_temp_readings[TEMP_LINE_4].times[0] = HAL_TIM_ReadCapturedValue(&htim3,
-	TIM_CHANNEL_1);
+	raw_temp_readings[TEMP_LINE_1].times[0] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
+	raw_temp_readings[TEMP_LINE_2].times[0] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_4);
+	raw_temp_readings[TEMP_LINE_3].times[0] = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_2);
+	raw_temp_readings[TEMP_LINE_4].times[0] = HAL_TIM_ReadCapturedValue(&htim3, TIM_CHANNEL_1);
 
 	// delay till got all readings
 	while ((num_readings[TEMP_LINE_2] < num_temp_readings[TEMP_LINE_2])) {
