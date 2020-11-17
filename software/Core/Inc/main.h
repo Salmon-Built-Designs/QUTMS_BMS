@@ -84,6 +84,8 @@ void Error_Handler(void);
 #define TEMP3_GPIO_Port GPIOB
 #define TEMP4_Pin GPIO_PIN_4
 #define TEMP4_GPIO_Port GPIOB
+#define BQ_POWER_Pin GPIO_PIN_9
+#define BQ_POWER_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

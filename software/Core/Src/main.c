@@ -45,6 +45,8 @@
 /* USER CODE BEGIN PD */
 
 #define N_CELLS	10
+#define OVER_VOLTAGE 4000
+#define UNDER_VOLTAGE 2000
 
 // OVRD_ALERT, SCD, OCD
 #define SYS_STAT_FLAG_BITS 0b00111111
@@ -66,6 +68,8 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
 void SystemClock_8MHz_Config(void);
+
+uint8_t startup_procedure();
 
 uint8_t GetHardwareID();
 
@@ -104,117 +108,26 @@ int main(void) {
 	MX_I2C1_Init();
 	MX_USART1_UART_Init();
 	//MX_CAN_Init();
-	MX_TIM2_Init();
+	//MX_TIM2_Init();
 	//MX_TIM1_Init();
-	MX_TIM3_Init();
+	//MX_TIM3_Init();
 	/* USER CODE BEGIN 2 */
+
+	if (!startup_procedure()) {
+		// failed to start up
+		Error_Handler();
+	}
 
 	uint16_t group_voltages[4];
 
-	// bring out of shipping mode
-	// full clock speed
-	SystemClock_8MHz_Config();
-
-	// initialize peripherals
-	MX_GPIO_Init();
-	MX_I2C1_Init();
-	MX_USART1_UART_Init();
-	MX_TIM2_Init();
-	MX_TIM1_Init();
-	MX_TIM3_Init();
-
-	// force temp soc to be high
+	// force temp soc to be high (need for temp reading laterz)
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
-	// both on to signify we vibing
-	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-
-	HAL_Delay(1000);
-
 	HAL_StatusTypeDef BQ_result = HAL_BUSY;
-
-	uint16_t UV = 2000;
-
-	if (bq769x0_set_under_voltage(&hi2c1, UV) != HAL_OK) {
-		Error_Handler();
-	}
-
-	uint16_t OV = 3800;
-
-	if (bq769x0_set_over_voltage(&hi2c1, OV) != HAL_OK) {
-		Error_Handler();
-	}
-
-	// check BQ for faults
 	uint8_t sys_stat = 0;
-	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
-	if (BQ_result != HAL_OK) {
-		// error, couldn't talk to BQ chip??
-		Error_Handler();
-	}
-
-	// set over voltage and under voltage
-
-	if ((sys_stat & SYS_STAT_FLAG_BITS) > 0) {
-		// fault pins are set whats the deal
-
-		// only clear pins we care about
-		sys_stat = sys_stat & SYS_STAT_FLAG_BITS;
-		BQ_result = bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT, sys_stat);
-		sys_stat = 0;
-
-		if (BQ_result != HAL_OK) {
-			// error, couldn't talk to BQ chip??
-			Error_Handler();
-		}
-
-		// confirm bits are cleared
-		BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
-
-		if ((BQ_result != HAL_OK) || (sys_stat & SYS_STAT_FLAG_BITS) != 0) {
-			// couldn't talk to BQ or bits are still set
-			Error_Handler();
-		}
-	}
-
-	// both off to signify we vibing
-	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(LED0_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-
-	// enable DSG
-	BQ_result = bq769x0_set_DSG(&hi2c1, 1);
-	if (BQ_result != HAL_OK) {
-		// error, couldn't talk to BQ chip??
-		Error_Handler();
-	}
-
-	HAL_Delay(400);
-
-	// check fault pin to make sure we're all good before starting main procedure
-	if (HAL_GPIO_ReadPin(CELL_ALERT_GPIO_Port, CELL_ALERT_Pin)
-			!= GPIO_PIN_RESET) {
-		// pin is high whats going on
-		BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
-
-		if (BQ_result != HAL_OK) {
-			// error, couldn't talk to BQ chip??
-			Error_Handler();
-		}
-
-		for (int i = 0; i < 3; i++) {
-			// read and transmit all voltages
-			BQ_result = bq769x0_read_voltage_group(&hi2c1, i, group_voltages);
-			if (BQ_result != HAL_OK) {
-				Error_Handler();
-			}
-		}
-
-		Error_Handler();
-	}
 
 	for (int i = 0; i < 3; i++) {
-		// read and transmit all voltages
+		// read voltages for debugging
 		BQ_result = bq769x0_read_voltage_group(&hi2c1, i, group_voltages);
 		if (BQ_result != HAL_OK) {
 			Error_Handler();
@@ -223,11 +136,6 @@ int main(void) {
 
 	// read BMS ID
 	uint8_t bms_id = GetHardwareID();
-
-	MX_CAN_Init();
-
-	// Initialize CAN
-	Configure_CAN(&hcan);
 
 	/* USER CODE END 2 */
 
@@ -247,10 +155,7 @@ int main(void) {
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
 	HAL_Delay(100);
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
-	//HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-
 	HAL_Delay(100);
-	//HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
 
 	// start CAN heartbeat timer
@@ -278,25 +183,20 @@ int main(void) {
 				Error_Handler();
 			}
 
-			char value = 'e';
-			HAL_UART_Transmit(&huart1, (uint8_t*) &value, sizeof(char),
-			HAL_MAX_DELAY);
-			HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t),
-			HAL_MAX_DELAY);
+			HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
 			if (sys_stat & BQ_SYS_OV) {
 				// OVER VOLTAGE
 				value = 'v';
 				HAL_UART_Transmit(&huart1, (uint8_t*) &value, sizeof(char),
 				HAL_MAX_DELAY);
-			}
 
-			// send error message
-			voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id, 0, 0);
-			header.ExtId = voltage_error_msg.id;
-			header.DLC = sizeof(voltage_error_msg.data);
-			HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data,
-					&txMailbox);
+				// send error message
+				voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id, 0, 0);
+				header.ExtId = voltage_error_msg.id;
+				header.DLC = sizeof(voltage_error_msg.data);
+				HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data, &txMailbox);
+			}
 
 			HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
 
@@ -304,7 +204,7 @@ int main(void) {
 			//BQ_result = bq769x0_set_DSG(&hi2c1, 0);
 		}
 
-		//CAN_count_between_heartbeats++;
+		CAN_count_between_heartbeats++;
 
 		if (CAN_count_between_heartbeats > 60) {
 			BQ_result = bq769x0_set_DSG(&hi2c1, 0);
@@ -312,9 +212,8 @@ int main(void) {
 			// this turns off the board lmao
 		}
 
-		HAL_UART_Transmit(&huart1, &CAN_count_between_heartbeats,
-				sizeof(uint8_t),
-				HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart1, &CAN_count_between_heartbeats, sizeof(uint8_t),
+		HAL_MAX_DELAY);
 
 		while (HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0) > 0) {
 			CAN_MSG_Generic_t msg;
@@ -323,8 +222,8 @@ int main(void) {
 			CAN_count_between_heartbeats = 0;  // reset CAN heartbeat timer
 		}
 
-		get_temp_reading();
-		//HAL_Delay(500); // simulate temp_reading
+		//get_temp_reading();
+		HAL_Delay(500); // simulate temp_reading
 		current_temp_reading = parse_temp_readings(raw_temp_readings);
 
 		HAL_UART_Transmit(&huart1, (uint8_t*) &num_readings[1], sizeof(uint8_t),
@@ -341,15 +240,13 @@ int main(void) {
 		// send temps
 
 		// send temp block 1
-		temp_msg = Compose_BMS_TransmitTemperature(bms_id, 0,
-				&current_temp_reading.temps[0]);
+		temp_msg = Compose_BMS_TransmitTemperature(bms_id, 0, &current_temp_reading.temps[0]);
 		header.ExtId = temp_msg.id;
 		header.DLC = sizeof(temp_msg.data);
 		HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
 
 		// send temp block 2
-		temp_msg = Compose_BMS_TransmitTemperature(bms_id, 1,
-				&current_temp_reading.temps[6]);
+		temp_msg = Compose_BMS_TransmitTemperature(bms_id, 1, &current_temp_reading.temps[6]);
 		header.ExtId = temp_msg.id;
 		header.DLC = sizeof(temp_msg.data);
 		HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
@@ -365,8 +262,7 @@ int main(void) {
 			}
 
 			uint8_t idx = i;
-			HAL_UART_Transmit(&huart1, &idx, 1,
-			HAL_MAX_DELAY);
+			HAL_UART_Transmit(&huart1, &idx, 1,	HAL_MAX_DELAY);
 
 			for (int j = 0; j < 4; j++) {
 				uint8_t volt = (float) group_voltages[j] / 100;
@@ -375,8 +271,7 @@ int main(void) {
 			}
 
 			// transmit voltage block
-			voltage_msg = Compose_BMS_TransmitVoltage(bms_id, i,
-					group_voltages);
+			voltage_msg = Compose_BMS_TransmitVoltage(bms_id, i, group_voltages);
 			header.ExtId = voltage_msg.id;
 			header.DLC = sizeof(voltage_msg.data);
 			HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
@@ -407,8 +302,7 @@ void SystemClock_Config(void) {
 	}
 	/** Initializes the CPU, AHB and APB buses clocks
 	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-			| RCC_CLOCKTYPE_PCLK1;
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
 	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
 	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV8;
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -416,8 +310,7 @@ void SystemClock_Config(void) {
 	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {
 		Error_Handler();
 	}
-	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1
-			| RCC_PERIPHCLK_I2C1;
+	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1 | RCC_PERIPHCLK_I2C1;
 	PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
 	PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
 	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
@@ -447,17 +340,15 @@ void SystemClock_8MHz_Config(void) {
 	}
 	/** Initializes the CPU, AHB and APB buses clocks
 	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-			| RCC_CLOCKTYPE_PCLK1;	// (0x00000002U)|(0x00000001U)|(0x00000004U)
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;// (0x00000002U)|(0x00000001U)|(0x00000004U)
 	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;	// (0x00000000U)
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;// (0x00000000U) //DIVIDER is primary diff
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;	// (0x00000000U) //DIVIDER is primary diff
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;		// (0x00000000U)
 
 	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK) {// {struct}, (0x00000000U)
 		Error_Handler();
 	}
-	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1
-			| RCC_PERIPHCLK_I2C1;	// (0x00000001U)| (0x00000020U)
+	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1 | RCC_PERIPHCLK_I2C1;	// (0x00000001U)| (0x00000020U)
 	PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;	// (0x00000000U)
 	PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;	// (0x00000000U)
 	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
@@ -477,6 +368,100 @@ uint8_t GetHardwareID() {
 	hardware_ID |= (HAL_GPIO_ReadPin(ID3_GPIO_Port, ID3_Pin) << 3);
 
 	return hardware_ID;
+}
+
+uint8_t startup_procedure() {
+	// turn both LEDs off for debugging (auto go on from GPIO init)
+	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+
+	uint8_t bqpower = HAL_GPIO_ReadPin(BQ_POWER_GPIO_Port, BQ_POWER_Pin);
+	//HAL_UART_Transmit(&huart1, &bqpower, sizeof(uint8_t), HAL_MAX_DELAY);
+
+	// wait a second to fizzle up
+	HAL_Delay(1000);
+
+	// check BQ chip
+	HAL_StatusTypeDef BQ_result = HAL_BUSY;
+	uint8_t sys_stat = 0;
+
+	// get initial sys_stat register
+	BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
+	if (BQ_result != HAL_OK) {
+		// error, couldn't talk to BQ chip??
+		Error_Handler();
+	}
+	HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
+
+	// set over and under voltage
+	uint16_t voltage_limit = OVER_VOLTAGE;
+	if (bq769x0_set_over_voltage(&hi2c1, voltage_limit) != HAL_OK) {
+		Error_Handler();
+	}
+
+	voltage_limit = UNDER_VOLTAGE;
+	if (bq769x0_set_under_voltage(&hi2c1, voltage_limit) != HAL_OK) {
+		Error_Handler();
+	}
+
+	// check value from sys_stat
+	// do this after setting over and under voltage
+	// so if we got an error caused by incorrect calibration if should stay cleared
+	if ((sys_stat & SYS_STAT_FLAG_BITS) > 0) {
+		// error has been detected potentially
+
+		// reset active errors
+		sys_stat = sys_stat & SYS_STAT_FLAG_BITS;
+		if (bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT, sys_stat) != HAL_OK) {
+			// error, couldn't talk to BQ chip??
+			Error_Handler();
+		}
+
+		// small delay to let the BQ chip redetect
+		HAL_Delay(100);
+
+		// read updated sys_stat
+		BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
+		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
+
+		if ((BQ_result != HAL_OK) || (sys_stat & SYS_STAT_FLAG_BITS) != 0) {
+			// couldn't talk to BQ or theres still an error
+			Error_Handler();
+		}
+
+	}
+
+	// everything is fine so turn the LEDs back on
+	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED0_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+
+	// enable DSG
+	BQ_result = bq769x0_set_DSG(&hi2c1, 1);
+	if (BQ_result != HAL_OK) {
+		// error, couldn't talk to BQ chip??
+		Error_Handler();
+	}
+
+	bqpower = HAL_GPIO_ReadPin(BQ_POWER_GPIO_Port, BQ_POWER_Pin);
+	//HAL_UART_Transmit(&huart1, &bqpower, sizeof(uint8_t), HAL_MAX_DELAY);
+
+	// go to full clock speed
+	SystemClock_8MHz_Config();
+
+	// reconfigure peripherals to use higher clock speed
+	MX_GPIO_Init();
+	MX_I2C1_Init();
+	MX_USART1_UART_Init();
+	MX_TIM1_Init();
+	MX_TIM2_Init();
+	MX_TIM3_Init();
+	MX_CAN_Init();
+
+	// initialize CAN
+	Configure_CAN(&hcan);
+
+	// everything is fine
+	return 1;
 }
 
 /* USER CODE END 4 */
