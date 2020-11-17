@@ -77,6 +77,7 @@ uint8_t GetHardwareID();
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint16_t group_voltages[4];
 /* USER CODE END 0 */
 
 /**
@@ -118,7 +119,7 @@ int main(void) {
 		Error_Handler();
 	}
 
-	uint16_t group_voltages[4];
+
 
 	// force temp soc to be high (need for temp reading laterz)
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
@@ -159,12 +160,16 @@ int main(void) {
 	MX_CAN_Init();
 	Configure_CAN(&hcan);
 
+	HAL_Delay(500);
+
 	while (1) {
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+		HAL_Delay(100);
+
 
 		bms_id = GetHardwareID();
 
@@ -266,6 +271,7 @@ int main(void) {
 			HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 
 		}
+
 
 	}
 	/* USER CODE END 3 */
@@ -414,11 +420,18 @@ uint8_t startup_procedure() {
 		bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
 		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
+		for (int i = 0; i < 3; i++) {
+				// read and transmit all voltages
+				if (bq769x0_read_voltage_group(&hi2c1, i, group_voltages) != HAL_OK) {
+					Error_Handler();
+				}
+			}
+/*
 		if ((BQ_result != HAL_OK) || (sys_stat & SYS_STAT_FLAG_BITS) != 0) {
 			// couldn't talk to BQ or theres still an error
 			Error_Handler();
 		}
-
+*/
 	}
 
 	// everything is fine so turn the LEDs back on

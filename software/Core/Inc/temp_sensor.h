@@ -11,7 +11,7 @@
 #include "main.h"
 
 #define MAX_NUM_READINGS 9
-#define NUM_TEMPS 13
+#define NUM_TEMPS 14
 
 // GPIO DEFINES
 #define TEMP1_PORT GPIOA
