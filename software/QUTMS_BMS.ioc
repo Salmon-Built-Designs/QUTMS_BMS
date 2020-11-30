@@ -2,7 +2,7 @@
 CAN.BS1=CAN_BS1_13TQ
 CAN.BS2=CAN_BS2_2TQ
 CAN.CalculateTimeQuantum=1000.0
-CAN.IPParameters=CalculateTimeQuantum,Prescaler,BS1,BS2,RFLM,Mode
+CAN.IPParameters=CalculateTimeQuantum,Prescaler,BS1,RFLM,Mode,BS2
 CAN.Mode=CAN_MODE_NORMAL
 CAN.Prescaler=1
 CAN.RFLM=ENABLE
@@ -157,7 +157,7 @@ ProjectManager.FreePins=false
 ProjectManager.HalAssertFull=false
 ProjectManager.HeapSize=0x200
 ProjectManager.KeepUserCode=true
-ProjectManager.LastFirmware=true
+ProjectManager.LastFirmware=false
 ProjectManager.LibraryCopy=1
 ProjectManager.MainLocation=Core/Src
 ProjectManager.NoMain=false

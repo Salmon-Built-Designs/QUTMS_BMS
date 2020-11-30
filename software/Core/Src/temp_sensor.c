@@ -73,7 +73,8 @@ void temp_sensor_init() {
 	//HAL_TIM_RegisterCallback(&htim3, HAL_TIM_IC_CAPTURE_CB_ID, Timer3_IC_CaptureCallback);
 }
 
-temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]) {
+temp_reading parse_temp_readings(raw_temp_reading raw_readings[4], uint16_t *error) {
+	*error = 0;
 	temp_reading reading = { 0 };
 	int temp_num = 0;
 	for (int i = 0; i < 4; i++) {
@@ -92,6 +93,11 @@ temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]) {
 				reading.temps[temp_num] = 0;
 			} else {
 				reading.temps[temp_num] = 421 - (751 * ((double) th / tl));
+				// cheeky check for bad temps
+				if (reading.temps[temp_num] > DANGER_TEMP) {
+					*error |= (1 << temp_num);
+				}
+
 			}
 			temp_num++;
 
@@ -164,4 +170,3 @@ void get_temp_reading() {
 	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_IC_Stop_IT(&htim3, TIM_CHANNEL_1);
 }
-

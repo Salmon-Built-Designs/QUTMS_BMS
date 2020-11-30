@@ -13,6 +13,8 @@
 #define MAX_NUM_READINGS 9
 #define NUM_TEMPS 14
 
+#define DANGER_TEMP 50
+
 // GPIO DEFINES
 #define TEMP1_PORT GPIOA
 #define TEMP2_PORT GPIOA
@@ -52,7 +54,7 @@ typedef struct temp_reading temp_reading;
 
 void temp_sensor_init();
 void get_temp_reading();
-temp_reading parse_temp_readings(raw_temp_reading raw_readings[4]);
+temp_reading parse_temp_readings(raw_temp_reading raw_readings[4], uint16_t *error);
 void delay_us (uint16_t us);
 
 
