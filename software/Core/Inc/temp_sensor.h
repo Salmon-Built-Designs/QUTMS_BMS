@@ -12,6 +12,8 @@
 
 #define MAX_NUM_READINGS 9
 #define NUM_TEMPS 14
+#define NUM_TEMP_LINES 4
+
 
 #define DANGER_TEMP 50
 
@@ -38,14 +40,6 @@ enum temp_lines {
 	TEMP_LINE_4 = 3
 };
 
-
-
-struct raw_temp_reading {
-	long times[MAX_NUM_READINGS];
-};
-
-typedef struct raw_temp_reading raw_temp_reading;
-
 struct temp_reading {
 	uint8_t temps[NUM_TEMPS];
 };
@@ -54,11 +48,10 @@ typedef struct temp_reading temp_reading;
 
 void temp_sensor_init();
 void get_temp_reading();
-temp_reading parse_temp_readings(raw_temp_reading raw_readings[4], uint16_t *error);
+temp_reading parse_temp_readings(long raw_readings[NUM_TEMP_LINES][MAX_NUM_READINGS], uint16_t *error);
 void delay_us (uint16_t us);
 
-
-extern uint8_t num_readings[4];
-extern raw_temp_reading raw_temp_readings[4];
+extern uint8_t num_readings[NUM_TEMP_LINES];
+extern long raw_temp_readings[NUM_TEMP_LINES][MAX_NUM_READINGS];
 
 #endif
