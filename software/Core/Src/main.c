@@ -164,8 +164,8 @@ int main(void) {
 	// initialize CAN
 	// flag so we can go into shipping from CAN error
 	CAN_error = true;
-	MX_CAN_Init();
-	Configure_CAN(&hcan);
+	//MX_CAN_Init();
+	//Configure_CAN(&hcan);
 	CAN_error = false;
 
 	HAL_Delay(500);
@@ -256,14 +256,14 @@ int main(void) {
 				&current_temp_reading.temps[0]);
 		header.ExtId = temp_msg.id;
 		header.DLC = sizeof(temp_msg.data);
-		HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
+		//HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
 
 		// send temp block 2
 		temp_msg = Compose_BMS_TransmitTemperature(bms_id, 1,
 				&current_temp_reading.temps[6]);
 		header.ExtId = temp_msg.id;
 		header.DLC = sizeof(temp_msg.data);
-		HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
+		//HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
 
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
@@ -294,8 +294,7 @@ int main(void) {
 							i * 4 + j, group_voltages[j]);
 					header.ExtId = voltage_error_msg.id;
 					header.DLC = sizeof(voltage_error_msg.data);
-					HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data,
-							&txMailbox);
+					//HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data,							&txMailbox);
 
 					// voltage error means set alarm line
 					//HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
@@ -307,7 +306,7 @@ int main(void) {
 					group_voltages);
 			header.ExtId = voltage_msg.id;
 			header.DLC = sizeof(voltage_msg.data);
-			HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
+			///HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 
 		}
 
