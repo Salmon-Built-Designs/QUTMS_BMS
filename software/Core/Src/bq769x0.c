@@ -348,6 +348,8 @@ HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c,
 	} else if (cell_num < 10) {
 		reg = BQ_CELLBAL2;
 		bit_num = cell_num - 5;
+	} else {
+		return HAL_ERROR;
 	}
 
 	uint8_t cur_value = 0;
