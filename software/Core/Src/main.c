@@ -50,6 +50,12 @@
 
 // OVRD_ALERT, SCD, OCD
 #define SYS_STAT_FLAG_BITS 0b00111111
+
+// Balancing constants
+#define BALANCING_DIFF 30		// As per v/100 (or 0.03V)
+#define BALANCING_TIME 24000000 // Defined by the C-rating used for charging, by my
+								//observations. At 5A 3-5seconds at most.
+								// 3 Seconds = 24e6 SysTicks at 8MHz.
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -79,6 +85,7 @@ uint8_t GetHardwareID();
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint16_t group_voltages[4];
+uint32_t balancedTime = 0;	//Counter for balancer. Uses SysTicks
 /* USER CODE END 0 */
 
 /**
@@ -168,6 +175,15 @@ int main(void) {
 	Configure_CAN(&hcan);
 	CAN_error = false;
 
+	// Balancing variables
+	//? We assume that at current setup we can balance only one cell at a time.
+	//?This depends on how much current and heat goes through bleed resistors and it's connections.
+	//?If so, we need to know only MAX voltages and their number.
+	//?In theory, we can balance Pack-1 cells, but only if we already have balance 1 at time.
+	uint16_t MAX = 0, MIN = 0, trVoltage = 0;
+	uint16_t l_MAX = 0, l_MIN = 0;
+
+	uint8_t i_MAX = 0, i_MIN = 0;
 	HAL_Delay(500);
 
 	while (1) {
@@ -268,6 +284,9 @@ int main(void) {
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
+		// Reset local variables
+		l_MAX = group_voltages[0];
+		l_MIN = group_voltages[0];
 		for (int i = 0; i < 3; i++) {
 			// read and transmit all voltages
 			BQ_result = bq769x0_read_voltage_group(&hi2c1, i, group_voltages);
@@ -309,7 +328,56 @@ int main(void) {
 			header.DLC = sizeof(voltage_msg.data);
 			HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 
+			//TODO: Balancing implementation
+			// Identify Min and Max of current group. This part can be added to previous loop.
+			// Potentially can be recieved from AMS
+			for(int j = 1; j < 4; j++) {
+				// Checking with local and global min-max variables
+				if(l_MAX < group_voltages[j]){
+					l_MAX = group_voltages[j];
+					if(MAX < l_MAX) {	// Update global value and corresponding cell index.
+						MAX = l_MAX;	//! Make sure count starts from 0, not from 10.
+						i_MAX = i*4+j;	//GroupOf4+№_inGroup
+					}
+				}
+				if(l_MIN > group_voltages[j]){
+					l_MIN = group_voltages[j];
+					if(MIN > l_MIN) {	// Repeat logic of MAX
+						MIN = l_MIN;
+						i_MIN = i*4+j;
+					}
+				}
+			}
 		}
+
+		int charging = 1;	//! A placeholder for determining if brick at charging state.
+		if(charging && balancedTime <= 1) {
+			// Check if Min and Max have a big absolute difference between each other.
+			if(abs(MAX-MIN) > BALANCING_DIFF) {
+				//!Trigger balancer at cell i_MAX
+				//Start counter. Get the SysTick()
+				balancedTime = HAL_GetTick();	// Set the zero point.
+				trVoltage = MIN;	// Troubling voltage
+			}
+
+		} else {
+			// Let it balance itself until time runs out.
+			//?During balancing, voltage readings has to be ignored.
+			//?Or make sure that cutt-off will not be triggered by voltage drop.
+
+			// When time waiting has elapsed. Reset timer and balancer.
+			if( (balancedTime-HAL_GetTick()) > BALANCING_TIME ) {
+				//Disable all balancers or only at i_Max. Safer to disable all.
+				balancedTime = 0; //Set timer to zero to enter the check routine.
+			}
+		}
+
+		// i_MIN acts as a troubling cell (trVoltage). It may be that it is not charging at all.
+		//If this is the case, it has to send an alarm and report it as damaged.
+		//This takes from 10min to 30min to determine if this is the actually what happened. It has to be
+		//done in order not to give balancers reason to work for nothing. (Leave this for later)
+
+
 
 	}
 	/* USER CODE END 3 */
