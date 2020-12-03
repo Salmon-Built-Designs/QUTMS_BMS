@@ -354,7 +354,7 @@ int main(void) {
 		if(charging && balancedTime <= 1) {
 			// Check if Min and Max have a big absolute difference between each other.
 			if(abs(MAX-MIN) > BALANCING_DIFF) {
-				//!Trigger balancer at cell i_MAX
+				//! Trigger balancer at cell i_MAX
 				//Start counter. Get the SysTick()
 				balancedTime = HAL_GetTick();	// Set the zero point.
 				trVoltage = MIN;	// Troubling voltage
@@ -367,7 +367,7 @@ int main(void) {
 
 			// When time waiting has elapsed. Reset timer and balancer.
 			if( (balancedTime-HAL_GetTick()) > BALANCING_TIME ) {
-				//Disable all balancers or only at i_Max. Safer to disable all.
+				//! Disable all balancers or only at i_Max. Safer to disable all.
 				balancedTime = 0; //Set timer to zero to enter the check routine.
 			}
 		}
