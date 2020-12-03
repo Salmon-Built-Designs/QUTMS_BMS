@@ -233,12 +233,19 @@ int main(void) {
 				&temp_error);
 
 		if (temp_error > 0) {
-			temp_error_msg = Compose_BMS_BadCellTemperature(bms_id, 0,
-					current_temp_reading.temps[0]);
-			header.ExtId = temp_error_msg.id;
-			header.DLC = sizeof(temp_error_msg.data);
-			HAL_CAN_AddTxMessage(&hcan, &header, temp_error_msg.data,
-					&txMailbox);
+			for (int i = 0; i < NUM_TEMPS; i++) {
+				if (current_temp_reading.temps[i] > DANGER_TEMP) {
+					temp_error_msg = Compose_BMS_BadCellTemperature(bms_id, i,
+							current_temp_reading.temps[i]);
+					header.ExtId = temp_error_msg.id;
+					header.DLC = sizeof(temp_error_msg.data);
+					HAL_CAN_AddTxMessage(&hcan, &header, temp_error_msg.data,
+							&txMailbox);
+					// only send first bad temp
+					break;
+				}
+			}
+
 		}
 
 		for (int i = 0; i < NUM_TEMPS; i++) {
