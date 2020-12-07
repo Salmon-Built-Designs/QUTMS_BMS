@@ -171,8 +171,8 @@ int main(void) {
 	// initialize CAN
 	// flag so we can go into shipping from CAN error
 	CAN_error = true;
-	MX_CAN_Init();
-	Configure_CAN(&hcan);
+	//MX_CAN_Init();
+	//Configure_CAN(&hcan);
 	CAN_error = false;
 
 	// Balancing variables
@@ -180,10 +180,17 @@ int main(void) {
 	//?This depends on how much current and heat goes through bleed resistors and it's connections.
 	//?If so, we need to know only MAX voltages and their number.
 	//?In theory, we can balance Pack-1 cells, but only if we already have balance 1 at time.
-	uint16_t MAX = 0, MIN = 0, trVoltage = 0;
+	uint16_t MAX = 0, MIN = 5000, trVoltage = 0;
 	uint16_t l_MAX = 0, l_MIN = 0;
 
 	uint8_t i_MAX = 0, i_MIN = 0;
+	HAL_StatusTypeDef balancer;
+	char buffer[25];
+	//! TO HELL IT. Reset them all.
+	for(int i = 0; i < 10; i++) {
+		balancer = bq769x0_set_cell_balancing(&hi2c1, i, 0);
+	}
+
 	HAL_Delay(500);
 
 	while (1) {
@@ -226,7 +233,7 @@ int main(void) {
 		 //BQ_result = bq769x0_set_DSG(&hi2c1, 0);
 		 }
 		 */
-		CAN_count_between_heartbeats++;
+		//CAN_count_between_heartbeats++;
 
 		if (CAN_count_between_heartbeats > 60) {
 			BQ_result = bq769x0_set_DSG(&hi2c1, 0);
@@ -287,6 +294,9 @@ int main(void) {
 		// Reset local variables
 		l_MAX = group_voltages[0];
 		l_MIN = group_voltages[0];
+		sprintf(buffer, "\033c");
+		HAL_UART_Transmit(&huart1, &buffer, strlen(buffer),
+						HAL_MAX_DELAY);
 		for (int i = 0; i < 3; i++) {
 			// read and transmit all voltages
 			BQ_result = bq769x0_read_voltage_group(&hi2c1, i, group_voltages);
@@ -299,14 +309,14 @@ int main(void) {
 
 			volt_error = 0;
 
-			for (int j = 0; j < 4; j++) {
+			for (int j = 0; ((j < 4) && ((i*4+j) < 10)); j++) {
 				if ((group_voltages[j] > OVER_VOLTAGE)
 						|| (group_voltages[j] < UNDER_VOLTAGE)) {
 					volt_error |= (1 << (i * 4 + j));
 				}
-				uint8_t volt = (float) group_voltages[j] / 100;
-				HAL_UART_Transmit(&huart1, &volt, 1,
-				HAL_MAX_DELAY);
+				sprintf(buffer, "%d: %dmV \n\r", i*4+j, group_voltages[j]);
+				HAL_UART_Transmit(&huart1, &buffer, strlen(buffer),
+								HAL_MAX_DELAY);
 
 				if ((volt_error & 0x3FF) > 0) {
 					voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id,
@@ -328,10 +338,11 @@ int main(void) {
 			header.DLC = sizeof(voltage_msg.data);
 			HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 
+
 			//TODO: Balancing implementation
 			// Identify Min and Max of current group. This part can be added to previous loop.
 			// Potentially can be recieved from AMS
-			for(int j = 1; j < 4; j++) {
+			for(int j = 1; ((j < 4) && ((i*4+j) < 10)); j++) {
 				// Checking with local and global min-max variables
 				if(l_MAX < group_voltages[j]){
 					l_MAX = group_voltages[j];
@@ -340,6 +351,7 @@ int main(void) {
 						i_MAX = i*4+j;	//GroupOf4+№_inGroup
 					}
 				}
+
 				if(l_MIN > group_voltages[j]){
 					l_MIN = group_voltages[j];
 					if(MIN > l_MIN) {	// Repeat logic of MAX
@@ -347,15 +359,32 @@ int main(void) {
 						i_MIN = i*4+j;
 					}
 				}
+//				sprintf(buffer, "MIN %d: %dmV \n\r", i_MIN, MIN);
+//				HAL_UART_Transmit(&huart1, &buffer, strlen(buffer),
+//								HAL_MAX_DELAY);
+
 			}
 		}
 
+		//balancer = bq769x0_set_cell_balancing(&hi2c1, 4, 0);
+
+		sprintf(buffer, "MAX %d: %dmV \n\r", i_MAX, MAX);
+		HAL_UART_Transmit(&huart1, &buffer, strlen(buffer),
+						HAL_MAX_DELAY);
+		sprintf(buffer, "MIN %d: %dmV \n\r", i_MIN, MIN);
+		HAL_UART_Transmit(&huart1, &buffer, strlen(buffer),
+						HAL_MAX_DELAY);
 		int charging = 1;	//! A placeholder for determining if brick at charging state.
 		if(charging && balancedTime <= 1) {
 			// Check if Min and Max have a big absolute difference between each other.
+			sprintf(buffer, "DIFF %dmV \n\r", MAX-MIN);
+			HAL_UART_Transmit(&huart1, &buffer, strlen(buffer),
+							HAL_MAX_DELAY);
 			if(abs(MAX-MIN) > BALANCING_DIFF) {
 				//! Trigger balancer at cell i_MAX
 				//Start counter. Get the SysTick()
+
+				//balancer = bq769x0_set_cell_balancing(&hi2c1, 2, 0);
 				balancedTime = HAL_GetTick();	// Set the zero point.
 				trVoltage = MIN;	// Troubling voltage
 			}
@@ -364,10 +393,14 @@ int main(void) {
 			// Let it balance itself until time runs out.
 			//?During balancing, voltage readings has to be ignored.
 			//?Or make sure that cutt-off will not be triggered by voltage drop.
-
+			sprintf(buffer, "TIME %d: \n\r", (balancedTime-HAL_GetTick()));
+			HAL_UART_Transmit(&huart1, &buffer, strlen(buffer),
+							HAL_MAX_DELAY);
+			//balancer = bq769x0_set_cell_balancing(&hi2c1, i_MIN, 0);
 			// When time waiting has elapsed. Reset timer and balancer.
 			if( (balancedTime-HAL_GetTick()) > BALANCING_TIME ) {
 				//! Disable all balancers or only at i_Max. Safer to disable all.
+				//balancer = bq769x0_set_cell_balancing(&hi2c1, 2, 0);
 				balancedTime = 0; //Set timer to zero to enter the check routine.
 			}
 		}
@@ -376,8 +409,10 @@ int main(void) {
 		//If this is the case, it has to send an alarm and report it as damaged.
 		//This takes from 10min to 30min to determine if this is the actually what happened. It has to be
 		//done in order not to give balancers reason to work for nothing. (Leave this for later)
-
-
+		sprintf(buffer, "END \n\n\r");
+		HAL_UART_Transmit(&huart1, &buffer, strlen(buffer),
+						HAL_MAX_DELAY);
+		MAX = 0; MIN = 5000;
 
 	}
 	/* USER CODE END 3 */
