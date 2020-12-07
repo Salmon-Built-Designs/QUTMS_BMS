@@ -10,7 +10,7 @@
 #include <string.h>
 
 // TODO: match this to physical number correctly
-uint8_t num_temp_readings[4] = { 9, 7, 9, 7 };
+uint8_t num_temp_readings[4] = { 9, 7, 7, 9 };
 uint8_t num_readings[4];
 long raw_temp_readings[NUM_TEMP_LINES][MAX_NUM_READINGS];
 
