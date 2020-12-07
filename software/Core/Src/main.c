@@ -50,6 +50,9 @@
 
 // OVRD_ALERT, SCD, OCD
 #define SYS_STAT_FLAG_BITS 0b00111111
+
+// corresponds to 20 seconds
+#define NUM_BAD_VOLTAGE_COUNT 40
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -61,6 +64,7 @@
 
 /* USER CODE BEGIN PV */
 bool CAN_error = false;
+uint8_t voltage_error_count[10];
 
 /* USER CODE END PV */
 
@@ -79,6 +83,7 @@ uint8_t GetHardwareID();
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint16_t group_voltages[4];
+uint16_t current_voltages[10];
 /* USER CODE END 0 */
 
 /**
@@ -148,7 +153,7 @@ int main(void) {
 	header.TransmitGlobalTime = DISABLE;
 	temp_reading current_temp_reading = { 0 };
 	uint16_t temp_error = 0;
-	uint16_t volt_error = 0;
+	//uint16_t volt_error = 0;
 
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
 	HAL_Delay(10);
@@ -164,11 +169,14 @@ int main(void) {
 	// initialize CAN
 	// flag so we can go into shipping from CAN error
 	CAN_error = true;
-	//MX_CAN_Init();
-	//Configure_CAN(&hcan);
+	MX_CAN_Init();
+	Configure_CAN(&hcan);
 	CAN_error = false;
 
 	HAL_Delay(500);
+
+	// reset voltage error count
+	memset(voltage_error_count, 0, 10);
 
 	while (1) {
 		/* USER CODE END WHILE */
@@ -263,14 +271,14 @@ int main(void) {
 				&current_temp_reading.temps[0]);
 		header.ExtId = temp_msg.id;
 		header.DLC = sizeof(temp_msg.data);
-		//HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
+		HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
 
 		// send temp block 2
 		temp_msg = Compose_BMS_TransmitTemperature(bms_id, 1,
 				&current_temp_reading.temps[6]);
 		header.ExtId = temp_msg.id;
 		header.DLC = sizeof(temp_msg.data);
-		//HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
+		HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
 
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
@@ -285,27 +293,32 @@ int main(void) {
 			//uint8_t idx = i;
 			//HAL_UART_Transmit(&huart1, &idx, 1, HAL_MAX_DELAY);
 
-			volt_error = 0;
+			//volt_error = 0;
 
-			for (int j = 0; j < 4; j++) {
+			for (int j = 0; ((j < 4) && ((i * 4 + j) < 10)); j++) {
+				current_voltages[i * 4 + j] = group_voltages[j];
 				if ((group_voltages[j] > OVER_VOLTAGE)
 						|| (group_voltages[j] < UNDER_VOLTAGE)) {
-					volt_error |= (1 << (i * 4 + j));
+					voltage_error_count[i * 4 + j]++;
+					//volt_error |= (1 << (i * 4 + j));
+				} else {
+					voltage_error_count[i * 4 + j] = 0;
 				}
 				uint8_t volt = (float) group_voltages[j] / 100;
 				HAL_UART_Transmit(&huart1, &volt, 1,
 				HAL_MAX_DELAY);
+				/*
+				 if ((volt_error & 0x3FF) > 0) {
+				 voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id,
+				 i * 4 + j, group_voltages[j]);
+				 header.ExtId = voltage_error_msg.id;
+				 header.DLC = sizeof(voltage_error_msg.data);
+				 //HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data,							&txMailbox);
 
-				if ((volt_error & 0x3FF) > 0) {
-					voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id,
-							i * 4 + j, group_voltages[j]);
-					header.ExtId = voltage_error_msg.id;
-					header.DLC = sizeof(voltage_error_msg.data);
-					//HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data,							&txMailbox);
-
-					// voltage error means set alarm line
-					//HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
-				}
+				 // voltage error means set alarm line
+				 //HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
+				 }
+				 */
 			}
 
 			// transmit voltage block
@@ -313,8 +326,25 @@ int main(void) {
 					group_voltages);
 			header.ExtId = voltage_msg.id;
 			header.DLC = sizeof(voltage_msg.data);
-			///HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
+			HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 
+		}
+
+		// check for a voltage error
+		for (int i = 0; i < 10; i++) {
+			if (voltage_error_count[i] > NUM_BAD_VOLTAGE_COUNT) {
+				voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id, i,
+						current_voltages[i]);
+				header.ExtId = voltage_error_msg.id;
+				header.DLC = sizeof(voltage_error_msg.data);
+				HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data,
+						&txMailbox);
+
+				// voltage error means set alarm line
+				HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
+
+				break;
+			}
 		}
 
 	}
