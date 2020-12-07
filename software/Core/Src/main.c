@@ -218,12 +218,14 @@ int main(void) {
 			 header.DLC = sizeof(voltage_error_msg.data);
 			 HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data, &txMailbox);
 
-			 }*/
+			 }
 
-			HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
+			//HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
 
 			// disable DSG
 			//BQ_result = bq769x0_set_DSG(&hi2c1, 0);
+
+			 */
 		}
 
 		CAN_count_between_heartbeats++;
