@@ -188,36 +188,44 @@ int main(void) {
 
 		bms_id = GetHardwareID();
 
-		/*
-		 if (HAL_GPIO_ReadPin(CELL_ALERT_GPIO_Port, CELL_ALERT_Pin)) {
-		 // detected an error
-		 // pin is high whats going on
-		 sys_stat = 0;
-		 BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
+		if (HAL_GPIO_ReadPin(CELL_ALERT_GPIO_Port, CELL_ALERT_Pin)) {
+			// detected an error
+			// pin is high whats going on
+			uint8_t sys_stat = 0;
+			BQ_result = bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
 
-		 if (BQ_result !=// HAL_OK) {
-		 // error, couldn't talk to BQ chip??
-		 Error_Handler();
-		 }
+			if (BQ_result != HAL_OK) {
+				// error, couldn't talk to BQ chip??
+				Error_Handler();
+			}
 
-		 HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t),
-		 HAL_MAX_DELAY);
+			HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t),
+			HAL_MAX_DELAY);
 
-		 if (sys_stat & BQ_SYS_OV) {
-		 // OVER VOLTAGE
-		 // send error message
-		 voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id, 0, 0);
-		 header.ExtId = voltage_error_msg.id;
-		 header.DLC = sizeof(voltage_error_msg.data);
-		 HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data, &txMailbox);
-		 }
+			if (sys_stat) {
+				BQ_result = bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT,
+						sys_stat);
+				// if this happened reset dsg on just in case
+				BQ_result = bq769x0_set_DSG(&hi2c1, 1);
 
-		 HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
+			}
+			/*
+			 if (sys_stat & BQ_SYS_OV) {
+			 // OVER VOLTAGE
+			 // send error message
+			 voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id, 0, 0);
+			 header.ExtId = voltage_error_msg.id;
+			 header.DLC = sizeof(voltage_error_msg.data);
+			 HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data, &txMailbox);
 
-		 // disable DSG
-		 //BQ_result = bq769x0_set_DSG(&hi2c1, 0);
-		 }
-		 */
+			 }*/
+
+			HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
+
+			// disable DSG
+			//BQ_result = bq769x0_set_DSG(&hi2c1, 0);
+		}
+
 		CAN_count_between_heartbeats++;
 
 		if (CAN_count_between_heartbeats > 60) {
@@ -445,18 +453,18 @@ uint8_t GetHardwareID() {
 }
 
 uint8_t startup_procedure() {
-	// force temp soc to be high
+// force temp soc to be high
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
-	// turn both LEDs off for debugging (auto go on from GPIO init)
+// turn both LEDs off for debugging (auto go on from GPIO init)
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 
-	// check BQ chip
+// check BQ chip
 	HAL_StatusTypeDef BQ_result = HAL_BUSY;
 	uint8_t sys_stat = 0;
 
-	// set under and over voltage
+// set under and over voltage
 	uint16_t voltage_limit = UNDER_VOLTAGE;
 	if (bq769x0_set_under_voltage(&hi2c1, voltage_limit) != HAL_OK) {
 		Error_Handler();
@@ -467,7 +475,7 @@ uint8_t startup_procedure() {
 		Error_Handler();
 	}
 
-	// get initial sys_stat register
+// get initial sys_stat register
 	if (bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat) != HAL_OK) {
 		// error, couldn't talk to BQ chip??
 		Error_Handler();
@@ -475,9 +483,9 @@ uint8_t startup_procedure() {
 
 	HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
-	// check value from sys_stat
-	// do this after setting over and under voltage
-	// so if we got an error caused by incorrect calibration if should stay cleared
+// check value from sys_stat
+// do this after setting over and under voltage
+// so if we got an error caused by incorrect calibration if should stay cleared
 	if ((sys_stat & SYS_STAT_FLAG_BITS) > 0) {
 		// error has been detected potentially
 
@@ -513,18 +521,18 @@ uint8_t startup_procedure() {
 		 */
 	}
 
-	// everything is fine so turn the LEDs back on
+// everything is fine so turn the LEDs back on
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LED0_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
 
-	// enable DSG
+// enable DSG
 	BQ_result = bq769x0_set_DSG(&hi2c1, 1);
 	if (BQ_result != HAL_OK) {
 		// error, couldn't talk to BQ chip??
 		Error_Handler();
 	}
 
-	// full clock speed
+// full clock speed
 	SystemClock_8MHz_Config();
 
 	MX_GPIO_Init();
@@ -534,10 +542,10 @@ uint8_t startup_procedure() {
 	MX_TIM1_Init();
 	MX_TIM3_Init();
 
-	//bqpower = HAL_GPIO_ReadPin(BQ_POWER_GPIO_Port, BQ_POWER_Pin);
-	//HAL_UART_Transmit(&huart1, &bqpower, sizeof(uint8_t), HAL_MAX_DELAY);
+//bqpower = HAL_GPIO_ReadPin(BQ_POWER_GPIO_Port, BQ_POWER_Pin);
+//HAL_UART_Transmit(&huart1, &bqpower, sizeof(uint8_t), HAL_MAX_DELAY);
 
-	// everything is fine
+// everything is fine
 	return 1;
 }
 
@@ -560,11 +568,11 @@ void Error_Handler(void) {
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_SET);
 
-	if (CAN_error) {
-		// couldn't start up cuz not in car so just turn off lol
-		bq769x0_set_DSG(&hi2c1, 0);
-		bq769x0_enter_shipping_mode(&hi2c1);
-	}
+	//if (CAN_error) {
+	// found error so just turn off lol
+	bq769x0_set_DSG(&hi2c1, 0);
+	bq769x0_enter_shipping_mode(&hi2c1);
+//	}
 
 	/* User can add his own implementation to report the HAL error return state */
 	while (1) {
