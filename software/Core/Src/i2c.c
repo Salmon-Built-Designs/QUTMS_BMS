@@ -1,12 +1,12 @@
 /**
   ******************************************************************************
-  * File Name          : I2C.c
-  * Description        : This file provides code for the configuration
-  *                      of the I2C instances.
+  * @file    i2c.c
+  * @brief   This file provides code for the configuration
+  *          of the I2C instances.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under BSD 3-Clause license,
@@ -21,7 +21,9 @@
 #include "i2c.h"
 
 /* USER CODE BEGIN 0 */
-
+// The AFE implements a standard 100-kHz I2C interface and acts as a slave
+//device.
+// The CRC polynomial is x8 + x2 + x + 1, and the initialvalue is 0.
 /* USER CODE END 0 */
 
 I2C_HandleTypeDef hi2c1;

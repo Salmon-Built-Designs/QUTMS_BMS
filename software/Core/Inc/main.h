@@ -58,6 +58,34 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define TEMP2_Pin GPIO_PIN_3
+#define TEMP2_GPIO_Port GPIOA
+#define TEMP_SOC_Pin GPIO_PIN_4
+#define TEMP_SOC_GPIO_Port GPIOA
+#define nALARM_Pin GPIO_PIN_5
+#define nALARM_GPIO_Port GPIOA
+#define ID0_Pin GPIO_PIN_0
+#define ID0_GPIO_Port GPIOB
+#define ID1_Pin GPIO_PIN_1
+#define ID1_GPIO_Port GPIOB
+#define ID2_Pin GPIO_PIN_2
+#define ID2_GPIO_Port GPIOB
+#define ID3_Pin GPIO_PIN_10
+#define ID3_GPIO_Port GPIOB
+#define CELL_ALERT_Pin GPIO_PIN_11
+#define CELL_ALERT_GPIO_Port GPIOB
+#define LED0_Pin GPIO_PIN_14
+#define LED0_GPIO_Port GPIOB
+#define LED1_Pin GPIO_PIN_15
+#define LED1_GPIO_Port GPIOB
+#define TEMP1_Pin GPIO_PIN_15
+#define TEMP1_GPIO_Port GPIOA
+#define TEMP3_Pin GPIO_PIN_3
+#define TEMP3_GPIO_Port GPIOB
+#define TEMP4_Pin GPIO_PIN_4
+#define TEMP4_GPIO_Port GPIOB
+#define BQ_POWER_Pin GPIO_PIN_9
+#define BQ_POWER_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
