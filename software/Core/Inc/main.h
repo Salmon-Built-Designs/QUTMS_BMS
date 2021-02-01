@@ -32,7 +32,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -87,6 +87,32 @@ void Error_Handler(void);
 #define BQ_POWER_Pin GPIO_PIN_9
 #define BQ_POWER_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
+
+#define TICKS_SECOND 1000
+#define NUM_VOLTAGE_GROUPS 3
+#define NUM_VOLTAGES 10
+
+#define NUM_TEMP_BLOCKS 2
+#define NUM_TEMPS_PER_BLOCK 7
+
+#define OVER_VOLTAGE 3700
+#define UNDER_VOLTAGE 2400
+
+// 30 seconds
+#define HEARTBEAT_TIMEOUT 30000
+
+// corresponds to 40 seconds, with voltages read at 250ms
+#define NUM_BAD_VOLTAGE_COUNT 160
+
+extern bool take_voltage_reading;
+extern bool update_balancing;
+
+#define BALANCING_GROUP_1 0b10101
+#define BALANCING_GROUP_2 0b01010
+
+// balance anything more than 100mv above the average
+#define BALANCING_THRESHOLD 100
+
 
 /* USER CODE END Private defines */
 

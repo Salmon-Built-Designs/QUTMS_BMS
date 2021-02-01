@@ -370,6 +370,22 @@ HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c,
 	return res;
 }
 
+HAL_StatusTypeDef bq769x0_set_cell_balancing_reg(I2C_HandleTypeDef *hi2c,
+		uint8_t reg_idx, uint8_t value) {
+
+	uint8_t reg = 0;
+
+	if (reg_idx == 0) {
+		reg = BQ_CELLBAL1;
+	} else if (reg_idx == 1) {
+		reg = BQ_CELLBAL2;
+	} else {
+		return HAL_ERROR;
+	}
+
+	return bq769x0_reg_write_byte(hi2c, reg, value);
+}
+
 HAL_StatusTypeDef bq769x0_reset_cell_balancing(I2C_HandleTypeDef *hi2c) {
 	HAL_StatusTypeDef res = bq769x0_reg_write_byte(hi2c, BQ_CELLBAL1, 0);
 	res = bq769x0_reg_write_byte(hi2c, BQ_CELLBAL2, 0);
