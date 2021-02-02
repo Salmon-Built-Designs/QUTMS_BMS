@@ -48,10 +48,10 @@ typedef struct temp_reading temp_reading;
 
 void temp_sensor_init();
 void start_temp_reading();
+void finish_temp_reading();
 bool finished_temp_reading();
 bool invalid_temp_reading();
 
-void get_temp_reading();
 temp_reading parse_temp_readings(long raw_readings[NUM_TEMP_LINES][MAX_NUM_READINGS], uint16_t *error);
 void delay_us (uint16_t us);
 

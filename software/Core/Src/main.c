@@ -32,6 +32,7 @@
 #include <math.h>
 
 #include "bq769x0.h"
+#include "QUTMS_can.h"
 #include "BMS_CAN_Messages.h"
 #include "temp_sensor.h"
 /* USER CODE END Includes */
@@ -334,6 +335,7 @@ int main(void) {
 		} else {
 			// is reading finished?
 			if (finished_temp_reading()) {
+				finish_temp_reading();
 				reading_temperature = false;
 
 				if (!invalid_temp_reading()) {

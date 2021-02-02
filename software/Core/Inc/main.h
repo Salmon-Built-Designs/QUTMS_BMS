@@ -88,7 +88,7 @@ void Error_Handler(void);
 #define BQ_POWER_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
-#define TICKS_SECOND 1000
+#define TICKS_SECOND 2000
 #define NUM_VOLTAGE_GROUPS 3
 #define NUM_VOLTAGES 10
 
