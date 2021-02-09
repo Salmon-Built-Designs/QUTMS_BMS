@@ -47,7 +47,9 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+//#define BMS_DEBUG_HEARTBEAT
+//#define BMS_DEBUG_BALANCING
+//#define BMS_DISABLE_PRINT_TEMPS
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/

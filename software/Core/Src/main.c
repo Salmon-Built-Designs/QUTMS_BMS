@@ -84,6 +84,8 @@ uint16_t group_voltages[4];
 uint16_t current_voltages[10];
 
 bool balancing_mode = false;
+
+char uart_buff[80];
 /* USER CODE END 0 */
 
 /**
@@ -106,7 +108,7 @@ int main(void) {
 
 	MX_GPIO_Init();
 	MX_I2C1_Init();
-	MX_USART1_UART_Init();
+	MX_USART1_UART_Init_1MHz();
 
 	// exit out of shipping mode
 	if (!startup_procedure()) {
@@ -197,6 +199,18 @@ int main(void) {
 	// start voltage timer
 	HAL_TIM_Base_Start_IT(&htim14);
 
+#ifdef BMS_DEBUG_BALANCING
+	balancing_mode = true;
+	HAL_TIM_Base_Start_IT(&htim16);
+	update_balancing = true;
+#endif
+
+	bq769x0_reset_cell_balancing(&hi2c1);
+	//bq769x0_set_cell_balancing(&hi2c1, 1, 1);
+
+	sprintf(uart_buff, "\r\nStart\r\n");
+	HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
 	while (1) {
 		/* USER CODE END WHILE */
 
@@ -217,8 +231,8 @@ int main(void) {
 				Error_Handler();
 			}
 
-			HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t),
-			HAL_MAX_DELAY);
+			sprintf(uart_buff, "CELL ALERT - sys_stat: %d\r\n", sys_stat);
+			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 			if (sys_stat) {
 				// just clear the stat register, voltage errors should be picked up by us
@@ -257,15 +271,30 @@ int main(void) {
 			}
 		}
 
+#ifndef BMS_DEBUG_HEARTBEAT
 		// check if heartbeat has expired
 		if ((HAL_GetTick() - CAN_count_between_heartbeats) > HEARTBEAT_TIMEOUT) {
+			sprintf(uart_buff, "Heartbeat timer expired (been %d ms), turning off...\r\n", (HAL_GetTick() - CAN_count_between_heartbeats));
+			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
 			// haven't heard from the AMS in 30 seconds, so turn off
 			BQ_result = bq769x0_set_DSG(&hi2c1, 0);
 			BQ_result = bq769x0_enter_shipping_mode(&hi2c1);
+
+			// small delay so we dont spam printing the timer expired
+			HAL_Delay(100);
 		}
 
+#endif
+
 		// check if time for voltage reading
-		if (take_voltage_reading) {
+		if (take_voltage_reading /*&& ( (balancing_mode && update_balancing) || (!balancing_mode) )*/) {
+
+			average_voltage = 0;
+
+			sprintf(uart_buff, "Voltages:");
+			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
 			// read and transmit all voltages
 			for (int i = 0; i < NUM_VOLTAGE_GROUPS; i++) {
 				// read voltages
@@ -273,8 +302,6 @@ int main(void) {
 				if (BQ_result != HAL_OK) {
 					Error_Handler();
 				}
-
-				average_voltage = 0;
 
 				// copy voltages into main voltage block
 				for (int j = 0; ((j < 4) && ((i * 4 + j) < 10)); j++) {
@@ -291,13 +318,10 @@ int main(void) {
 					}
 
 					// send voltage on uart
-					uint8_t volt = (float) group_voltages[j] / 100;
-					HAL_UART_Transmit(&huart1, &volt, 1,
-					HAL_MAX_DELAY);
-				}
+					sprintf(uart_buff, " %d", group_voltages[j]);
+					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
-				// calculate average voltage
-				average_voltage = ((float) average_voltage / NUM_VOLTAGES);
+				}
 
 				// transmit voltage block
 				voltage_msg = Compose_BMS_TransmitVoltage(bms_id, i, group_voltages);
@@ -305,6 +329,12 @@ int main(void) {
 				header.DLC = sizeof(voltage_msg.data);
 				HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 			}
+
+			// calculate average voltage
+			average_voltage = ((float) average_voltage / NUM_VOLTAGES);
+
+			sprintf(uart_buff, "\tAV: %d\r\n", average_voltage);
+			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 			// all voltages have been read, now check for any errors
 			for (int i = 0; i < NUM_VOLTAGES; i++) {
@@ -314,6 +344,9 @@ int main(void) {
 					header.ExtId = voltage_error_msg.id;
 					header.DLC = sizeof(voltage_error_msg.data);
 					HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data, &txMailbox);
+
+					sprintf(uart_buff, "Bad Voltage at %d: %d\r\n", i, current_voltages[i]);
+					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 					// trip alarm line to let AMS know
 					HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_SET);
@@ -344,6 +377,10 @@ int main(void) {
 					// parse reading
 					current_temp_reading = parse_temp_readings(raw_temp_readings, &temp_error);
 
+#ifndef BMS_DISABLE_PRINT_TEMPS
+					sprintf(uart_buff, "Temps");
+					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+#endif
 					// transmit readings
 					for (int i = 0; i < NUM_TEMP_BLOCKS; i++) {
 						temp_msg = Compose_BMS_TransmitTemperature(bms_id, i, &current_temp_reading.temps[i * NUM_TEMPS_PER_BLOCK]);
@@ -356,8 +393,18 @@ int main(void) {
 					HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 					HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
+#ifndef BMS_DISABLE_PRINT_TEMPS
+					for (int i = 0; i < NUM_TEMPS; i++) {
+						sprintf(uart_buff, " %d", current_temp_reading.temps[i]);
+						HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+					}
+
+					sprintf(uart_buff, "\r\n");
+					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+#endif
+
 					// dump temperatures over uart
-					HAL_UART_Transmit(&huart1, current_temp_reading.temps, NUM_TEMPS, HAL_MAX_DELAY);
+					//HAL_UART_Transmit(&huart1, current_temp_reading.temps, NUM_TEMPS, HAL_MAX_DELAY);
 
 					// check for temperature errors
 					if (temp_error > 0) {
@@ -368,6 +415,10 @@ int main(void) {
 								header.ExtId = temp_error_msg.id;
 								header.DLC = sizeof(temp_error_msg.data);
 								HAL_CAN_AddTxMessage(&hcan, &header, temp_error_msg.data, &txMailbox);
+
+								sprintf(uart_buff, "Bad Temp at %d: %d\r\n", i, current_temp_reading.temps[i]);
+								HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
 								// only send first bad temp, so exit out
 								break;
 							}
@@ -380,13 +431,16 @@ int main(void) {
 		// check if time to update balancing
 		if (balancing_mode && update_balancing) {
 			// start by clearing all balancing registers
-			bq769x0_reset_cell_balancing(&hi2c1);
+			//bq769x0_reset_cell_balancing(&hi2c1);
 
 			// check temperature
 			// TODO:
 
 			// calculate delta of each voltage to average
 			int deltas[NUM_VOLTAGES];
+
+			sprintf(uart_buff, "B Deltas:\t");
+			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 			for (int i = 0; i < NUM_VOLTAGES; i++) {
 				deltas[i] = average_voltage - current_voltages[i];
@@ -395,7 +449,16 @@ int main(void) {
 				if (deltas[i] < 0) {
 					deltas[i] = 0;
 				}
+
+				sprintf(uart_buff, " %d", deltas[i]);
+				HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 			}
+
+			sprintf(uart_buff, "\r\n");
+			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
+			sprintf(uart_buff, "Balancing:\t");
+			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 			// balance each group of 5 cells separately
 			for (int i = 0; i < 2; i++) {
@@ -429,8 +492,16 @@ int main(void) {
 				}
 
 				// set balancing for this group
-				bq769x0_set_cell_balancing_reg(&hi2c1, i, balancing_idx);
+				//bq769x0_set_cell_balancing_reg(&hi2c1, i, balancing_idx);
+
+				for (int i = 0; i < 5; i++) {
+					sprintf(uart_buff, " %d", (balancing_idx >> i) & 1);
+					HAL_UART_Transmit(&huart1, &uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+				}
 			}
+
+			sprintf(uart_buff, "\r\n");
+			HAL_UART_Transmit(&huart1, &uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 			// clear flag
 			update_balancing = false;
@@ -557,7 +628,10 @@ uint8_t startup_procedure() {
 		Error_Handler();
 	}
 
-	HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
+	sprintf(uart_buff, "Initial - sys_stat: %d\r\n", sys_stat);
+	HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
+	//HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
 	// check value from sys_stat
 	// do this after setting over and under voltage
@@ -568,23 +642,33 @@ uint8_t startup_procedure() {
 		// clear read cycle to phase out old values
 		sys_stat = sys_stat & SYS_STAT_FLAG_BITS;
 		bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT, sys_stat);
-		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t),
-		HAL_MAX_DELAY);
+
+		sprintf(uart_buff, "WARNING - writing_0 sys_stat: %d: %d\r\n", sys_stat);
+		HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
+		//HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
 		bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
-		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t),
-		HAL_MAX_DELAY);
+		sprintf(uart_buff, "WARNING - current sys_stat: %d: %d\r\n", sys_stat);
+		HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+		// HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
 		// clear and read final register values
 
 		sys_stat = sys_stat & SYS_STAT_FLAG_BITS;
 		bq769x0_reg_write_byte(&hi2c1, BQ_SYS_STAT, sys_stat);
-		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t),
-		HAL_MAX_DELAY);
+
+		sprintf(uart_buff, "WARNING - writing_1 sys_stat: %d: %d\r\n", sys_stat);
+		HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
+		//HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
 		bq769x0_reg_read_byte(&hi2c1, BQ_SYS_STAT, &sys_stat);
-		HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t),
-		HAL_MAX_DELAY);
+
+		sprintf(uart_buff, "WARNING - final sys_stat: %d: %d\r\n", sys_stat);
+		HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
+		//HAL_UART_Transmit(&huart1, &sys_stat, sizeof(uint8_t), HAL_MAX_DELAY);
 
 		for (int i = 0; i < 3; i++) {
 			// read and transmit all voltages
@@ -624,9 +708,8 @@ uint8_t startup_procedure() {
 void Error_Handler(void) {
 	/* USER CODE BEGIN Error_Handler_Debug */
 
-	char value = 'q';
-	HAL_UART_Transmit(&huart1, (uint8_t*) &value, sizeof(char),
-	HAL_MAX_DELAY);
+	sprintf(uart_buff, "Error\r\n");
+	HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);
@@ -636,14 +719,14 @@ void Error_Handler(void) {
 
 	//if (CAN_error) {
 	// found error so just turn off lol
-	bq769x0_set_DSG(&hi2c1, 0);
-	bq769x0_enter_shipping_mode(&hi2c1);
+	//bq769x0_set_DSG(&hi2c1, 0);
+	//bq769x0_enter_shipping_mode(&hi2c1);
 //	}
 
 	/* User can add his own implementation to report the HAL error return state */
-	while (1) {
-		HAL_Delay(100);
-	}
+	/*while (1) {
+	 HAL_Delay(100);
+	 }*/
 	/* USER CODE END Error_Handler_Debug */
 }
 
