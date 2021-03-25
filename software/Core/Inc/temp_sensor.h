@@ -11,8 +11,8 @@
 #include "main.h"
 
 #define MAX_NUM_READINGS 9
-#define NUM_TEMPS 14
-#define NUM_TEMP_LINES 4
+#define NUM_TEMPS (14+1)
+#define NUM_TEMP_LINES 5
 
 
 #define DANGER_TEMP 50
@@ -22,22 +22,27 @@
 #define TEMP2_PORT GPIOA
 #define TEMP3_PORT GPIOB
 #define TEMP4_PORT GPIOB
+#define TEMP5_PORT GPIOB
 
 #define TEMP1_PIN GPIO_PIN_15
 #define TEMP2_PIN GPIO_PIN_3
 #define TEMP3_PIN GPIO_PIN_3
 #define TEMP4_PIN GPIO_PIN_4
+#define TEMP5_PIN GPIO_PIN_5
 
 #define TEMP1_EXT EXTI4_15_IRQn
 #define TEMP2_EXT EXTI2_3_IRQn
 #define TEMP3_EXT EXTI2_3_IRQn
 #define TEMP4_EXT EXTI4_15_IRQn
+// TODO: ??
+#define TEMP5_EXT EXTI4_15_IRQn
 
 enum temp_lines {
 	TEMP_LINE_1 = 0,
 	TEMP_LINE_2 = 1,
 	TEMP_LINE_3 = 2,
-	TEMP_LINE_4 = 3
+	TEMP_LINE_4 = 3,
+	TEMP_LINE_5 = 4
 };
 
 struct temp_reading {

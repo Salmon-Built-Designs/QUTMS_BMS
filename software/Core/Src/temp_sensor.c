@@ -6,12 +6,13 @@
  */
 
 #include "temp_sensor.h"
+#include "main.h"
 #include "tim.h"
 #include <string.h>
 
 // TODO: match this to physical number correctly
-uint8_t num_temp_readings[4] = { 9, 7, 7, 9 };
-uint8_t num_readings[4];
+uint8_t num_temp_readings[NUM_TEMP_LINES] = { 9, 7, 7, 9, 3 };
+uint8_t num_readings[NUM_TEMP_LINES];
 long raw_temp_readings[NUM_TEMP_LINES][MAX_NUM_READINGS];
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
@@ -27,13 +28,25 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 				raw_temp_readings[TEMP_LINE_4][num_readings[TEMP_LINE_4]] += channel1;
 				//uint32_t timer_value = __HAL_TIM_GET_COUNTER(&htim3);
 				num_readings[TEMP_LINE_4]++;
-				if (num_readings[TEMP_LINE_4] < num_temp_readings[TEMP_LINE_4]) {
-					//raw_temp_readings[TEMP_LINE_4].times[num_readings[TEMP_LINE_4]] =	timer_value;
-					__HAL_TIM_SET_COUNTER(&htim3, 0);
-				}
+				/*if (num_readings[TEMP_LINE_4] < num_temp_readings[TEMP_LINE_4]) {
+				 //raw_temp_readings[TEMP_LINE_4].times[num_readings[TEMP_LINE_4]] =	timer_value;
+				 __HAL_TIM_SET_COUNTER(&htim3, 0);
+				 }*/
 
 			}
 
+		} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
+			// temp5 - balancing board
+			if (num_readings[TEMP_LINE_5] < num_temp_readings[TEMP_LINE_5]) {
+				raw_temp_readings[TEMP_LINE_5][num_readings[TEMP_LINE_5]] += channel2;
+				//uint32_t timer_value = __HAL_TIM_GET_COUNTER(&htim3);
+				num_readings[TEMP_LINE_5]++;
+				if (num_readings[TEMP_LINE_5] < num_temp_readings[TEMP_LINE_5]) {
+					//raw_temp_readings[TEMP_LINE_4].times[num_readings[TEMP_LINE_4]] =	timer_value;
+					//__HAL_TIM_SET_COUNTER(&htim3, 0);
+				}
+
+			}
 		}
 	} else if (htim->Instance == TIM2) {
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
@@ -72,7 +85,7 @@ temp_reading parse_temp_readings(long raw_readings[NUM_TEMP_LINES][MAX_NUM_READI
 	*error = 0;
 	temp_reading reading = { 0 };
 	int temp_num = 0;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < NUM_TEMP_LINES; i++) {
 		int num_temp_vals = (num_temp_readings[i] - 1) / 2;
 		for (int j = 0; j < num_temp_vals; j++) {
 			long th = 0;
@@ -141,9 +154,11 @@ void start_temp_reading() {
 
 	// start channel interrupts
 	HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
+	HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_2);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
+
 	raw_temp_readings[TEMP_LINE_1][0] = HAL_TIM_ReadCapturedValue(&htim2,
 	TIM_CHANNEL_1);
 	raw_temp_readings[TEMP_LINE_2][0] = HAL_TIM_ReadCapturedValue(&htim2,
@@ -152,7 +167,10 @@ void start_temp_reading() {
 	TIM_CHANNEL_2);
 	raw_temp_readings[TEMP_LINE_4][0] = HAL_TIM_ReadCapturedValue(&htim3,
 	TIM_CHANNEL_1);
-	__HAL_TIM_SET_COUNTER(&htim3, 0);
+	raw_temp_readings[TEMP_LINE_5][0] = HAL_TIM_ReadCapturedValue(&htim3,
+	TIM_CHANNEL_2);
+
+	//__HAL_TIM_SET_COUNTER(&htim3, 0);
 }
 
 void finish_temp_reading() {
@@ -160,6 +178,7 @@ void finish_temp_reading() {
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 
 	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
+	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_4);
 	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_IC_Stop_IT(&htim3, TIM_CHANNEL_1);
@@ -167,8 +186,12 @@ void finish_temp_reading() {
 
 bool finished_temp_reading() {
 	// have all the temp readings finished?
-	if ((num_readings[TEMP_LINE_1] >= num_temp_readings[TEMP_LINE_1]) && (num_readings[TEMP_LINE_2] >= num_temp_readings[TEMP_LINE_2]) && (num_readings[TEMP_LINE_3] >= num_temp_readings[TEMP_LINE_3])
-			&& (num_readings[TEMP_LINE_4] >= num_temp_readings[TEMP_LINE_4])) {
+	if ((num_readings[TEMP_LINE_1] >= num_temp_readings[TEMP_LINE_1])
+			&& (num_readings[TEMP_LINE_2] >= num_temp_readings[TEMP_LINE_2])
+			&& (num_readings[TEMP_LINE_3] >= num_temp_readings[TEMP_LINE_3])
+			&& (num_readings[TEMP_LINE_4] >= num_temp_readings[TEMP_LINE_4])
+			// only check last temperature sensor if we're actively balancing (otherwise board might not be there lol)
+			&& (balancing_mode && (num_readings[TEMP_LINE_5] >= num_temp_readings[TEMP_LINE_5]))) {
 		invalid_reading = false;
 		return true;
 	}
