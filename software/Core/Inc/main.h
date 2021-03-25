@@ -96,8 +96,8 @@ void Error_Handler(void);
 #define NUM_VOLTAGE_GROUPS 3
 #define NUM_VOLTAGES 10
 
-#define NUM_TEMP_BLOCKS 2
-#define NUM_TEMPS_PER_BLOCK 7
+#define NUM_TEMP_BLOCKS 3
+#define NUM_TEMPS_PER_BLOCK 6
 
 #define OVER_VOLTAGE 3700
 #define UNDER_VOLTAGE 2400

@@ -159,6 +159,7 @@ int main(void) {
 	BMS_TransmitTemperature_t temp_msg;
 	BMS_BadCellVoltage_t voltage_error_msg;
 	BMS_BadCellTemperature_t temp_error_msg;
+	BMS_TransmitBalancing_t balancing_msg;
 	CAN_TxHeaderTypeDef header = { 0 };
 	header.IDE = CAN_ID_EXT;
 	header.RTR = CAN_RTR_DATA;
@@ -460,6 +461,8 @@ int main(void) {
 			sprintf(uart_buff, "Balancing:\t");
 			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
+			uint16_t balancing_state = 0;
+
 			// balance each group of 5 cells separately
 			for (int i = 0; i < 2; i++) {
 				// determine which cluster needs more balancing
@@ -491,6 +494,8 @@ int main(void) {
 					}
 				}
 
+				balancing_state |= balancing_idx << (5 * i);
+
 				// set balancing for this group
 				//bq769x0_set_cell_balancing_reg(&hi2c1, i, balancing_idx);
 
@@ -502,6 +507,12 @@ int main(void) {
 
 			sprintf(uart_buff, "\r\n");
 			HAL_UART_Transmit(&huart1, &uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
+			// send CAN message to reflect balancing update
+			balancing_msg = Compose_BMS_TransmitBalancing(bms_id, average_voltage, balancing_state);
+			header.ExtId = balancing_msg.id;
+			header.DLC = sizeof(balancing_msg.data);
+			HAL_CAN_AddTxMessage(&hcan, &header, balancing_msg.data, &txMailbox);
 
 			// clear flag
 			update_balancing = false;
