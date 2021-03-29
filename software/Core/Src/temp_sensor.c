@@ -25,7 +25,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
 			// temp1
 			if (num_readings[TEMP_LINE_4] < num_temp_readings[TEMP_LINE_4]) {
-				raw_temp_readings[TEMP_LINE_4][num_readings[TEMP_LINE_4]] += channel1;
+				raw_temp_readings[TEMP_LINE_4][num_readings[TEMP_LINE_4]] = channel1;
 				//uint32_t timer_value = __HAL_TIM_GET_COUNTER(&htim3);
 				num_readings[TEMP_LINE_4]++;
 				/*if (num_readings[TEMP_LINE_4] < num_temp_readings[TEMP_LINE_4]) {
@@ -38,13 +38,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 		} else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) {
 			// temp5 - balancing board
 			if (num_readings[TEMP_LINE_5] < num_temp_readings[TEMP_LINE_5]) {
-				raw_temp_readings[TEMP_LINE_5][num_readings[TEMP_LINE_5]] += channel2;
+				raw_temp_readings[TEMP_LINE_5][num_readings[TEMP_LINE_5]] = channel2;
 				//uint32_t timer_value = __HAL_TIM_GET_COUNTER(&htim3);
 				num_readings[TEMP_LINE_5]++;
-				if (num_readings[TEMP_LINE_5] < num_temp_readings[TEMP_LINE_5]) {
-					//raw_temp_readings[TEMP_LINE_4].times[num_readings[TEMP_LINE_4]] =	timer_value;
-					//__HAL_TIM_SET_COUNTER(&htim3, 0);
-				}
 
 			}
 		}
@@ -90,13 +86,8 @@ temp_reading parse_temp_readings(long raw_readings[NUM_TEMP_LINES][MAX_NUM_READI
 		for (int j = 0; j < num_temp_vals; j++) {
 			long th = 0;
 			long tl = 0;
-			if (i == 3) {
-				th = raw_readings[i][j * 2 + 1];
-				tl = raw_readings[i][j * 2 + 2];
-			} else {
-				th = raw_readings[i][j * 2 + 1] - raw_readings[i][j * 2];
-				tl = raw_readings[i][j * 2 + 2] - raw_readings[i][j * 2 + 1];
-			}
+			th = raw_readings[i][j * 2 + 1] - raw_readings[i][j * 2];
+			tl = raw_readings[i][j * 2 + 2] - raw_readings[i][j * 2 + 1];
 			if (tl == 0 || th == 0) {
 				reading.temps[temp_num] = 0;
 			} else {
@@ -131,6 +122,14 @@ void start_temp_reading() {
 
 	HAL_TIM_Base_Start(&htim1);
 
+	delay_us(10);
+
+	raw_temp_readings[TEMP_LINE_1][0] = 0;
+	raw_temp_readings[TEMP_LINE_2][0] = 0;
+	raw_temp_readings[TEMP_LINE_3][0] = 0;
+	raw_temp_readings[TEMP_LINE_4][0] = 0;
+	raw_temp_readings[TEMP_LINE_5][0] = 0;
+
 	num_readings[0] = 1;
 	num_readings[1] = 1;
 	num_readings[2] = 1;
@@ -139,18 +138,15 @@ void start_temp_reading() {
 	// set low
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-	delay_us(20);
+
+	//delay_us(40);
+	HAL_Delay(1);
 
 	// set high
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 	//HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	delay_us(20);
-
-	// set low - start reading
-	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-	//HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	delay_us(9);
 
 	// start channel interrupts
 	HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
@@ -159,18 +155,13 @@ void start_temp_reading() {
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
 
-	raw_temp_readings[TEMP_LINE_1][0] = HAL_TIM_ReadCapturedValue(&htim2,
-	TIM_CHANNEL_1);
-	raw_temp_readings[TEMP_LINE_2][0] = HAL_TIM_ReadCapturedValue(&htim2,
-	TIM_CHANNEL_4);
-	raw_temp_readings[TEMP_LINE_3][0] = HAL_TIM_ReadCapturedValue(&htim2,
-	TIM_CHANNEL_2);
-	raw_temp_readings[TEMP_LINE_4][0] = HAL_TIM_ReadCapturedValue(&htim3,
-	TIM_CHANNEL_1);
-	raw_temp_readings[TEMP_LINE_5][0] = HAL_TIM_ReadCapturedValue(&htim3,
-	TIM_CHANNEL_2);
+	__HAL_TIM_SET_COUNTER(&htim2, 0);
+	__HAL_TIM_SET_COUNTER(&htim3, 0);
 
-	//__HAL_TIM_SET_COUNTER(&htim3, 0);
+	// set low - start reading
+	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+	//HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 }
 
 void finish_temp_reading() {
@@ -182,16 +173,19 @@ void finish_temp_reading() {
 	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_4);
 	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_IC_Stop_IT(&htim3, TIM_CHANNEL_1);
+
+	HAL_TIM_Base_Stop(&htim1);
 }
 
 bool finished_temp_reading() {
 	// have all the temp readings finished?
-	if ((num_readings[TEMP_LINE_1] >= num_temp_readings[TEMP_LINE_1])
-			&& (num_readings[TEMP_LINE_2] >= num_temp_readings[TEMP_LINE_2])
-			&& (num_readings[TEMP_LINE_3] >= num_temp_readings[TEMP_LINE_3])
+	if ((num_readings[TEMP_LINE_1] >= num_temp_readings[TEMP_LINE_1]) && (num_readings[TEMP_LINE_2] >= num_temp_readings[TEMP_LINE_2]) && (num_readings[TEMP_LINE_3] >= num_temp_readings[TEMP_LINE_3])
 			&& (num_readings[TEMP_LINE_4] >= num_temp_readings[TEMP_LINE_4])
 			// only check last temperature sensor if we're actively balancing (otherwise board might not be there lol)
-			&& (balancing_mode && (num_readings[TEMP_LINE_5] >= num_temp_readings[TEMP_LINE_5]))) {
+			/*
+			 && (balancing_mode && (num_readings[TEMP_LINE_5] >= num_temp_readings[TEMP_LINE_5]))
+			 */
+			) {
 		invalid_reading = false;
 		return true;
 	}

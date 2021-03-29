@@ -114,8 +114,8 @@ extern bool update_balancing;
 #define BALANCING_GROUP_1 0b10101
 #define BALANCING_GROUP_2 0b01010
 
-// balance anything more than 100mv above the average
-#define BALANCING_THRESHOLD 100
+// balance anything more than 50mv above the average
+#define BALANCING_THRESHOLD 50
 
 extern bool balancing_mode;
 /* USER CODE END Private defines */
