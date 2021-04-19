@@ -384,6 +384,7 @@ int main(void)
 					sprintf(uart_buff, "Temps");
 					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 #endif
+
 					// transmit readings
 					for (int i = 0; i < NUM_TEMP_BLOCKS; i++) {
 						temp_msg = Compose_BMS_TransmitTemperature(bms_id, i, &current_temp_reading.temps[i * NUM_TEMPS_PER_BLOCK]);
