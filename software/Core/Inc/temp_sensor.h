@@ -11,7 +11,7 @@
 #include "main.h"
 
 #define MAX_NUM_READINGS 9
-#define NUM_TEMPS (14+1)
+#define NUM_TEMPS (14+2)
 #define NUM_TEMP_LINES 5
 
 

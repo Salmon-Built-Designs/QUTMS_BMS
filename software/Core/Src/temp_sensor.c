@@ -11,7 +11,7 @@
 #include <string.h>
 
 // TODO: match this to physical number correctly
-uint8_t num_temp_readings[NUM_TEMP_LINES] = { 9, 7, 7, 9, 3 };
+uint8_t num_temp_readings[NUM_TEMP_LINES] = { 9, 7, 7, 9, 5 };
 uint8_t num_readings[NUM_TEMP_LINES];
 long raw_temp_readings[NUM_TEMP_LINES][MAX_NUM_READINGS];
 
@@ -134,6 +134,7 @@ void start_temp_reading() {
 	num_readings[1] = 1;
 	num_readings[2] = 1;
 	num_readings[3] = 1;
+	num_readings[4] = 1;
 
 	// set low
 	HAL_GPIO_WritePin(TEMP_SOC_GPIO_Port, TEMP_SOC_Pin, GPIO_PIN_RESET);
