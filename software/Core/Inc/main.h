@@ -102,6 +102,8 @@ void Error_Handler(void);
 #define OVER_VOLTAGE 3700
 #define UNDER_VOLTAGE 2400
 
+#define DEFAULT_BMS_COUNT 6
+
 // 30 seconds
 #define HEARTBEAT_TIMEOUT 30000
 
