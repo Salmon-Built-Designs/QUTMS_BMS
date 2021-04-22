@@ -204,7 +204,7 @@ int main(void) {
 	// start voltage timer
 	HAL_TIM_Base_Start_IT(&htim14);
 
-#ifdef BMS_DEBUG_BALANCING
+#if BMS_DEBUG_BALANCING == 1
 	balancing_mode = true;
 	HAL_TIM_Base_Start_IT(&htim16);
 	update_balancing = true;
@@ -267,15 +267,17 @@ int main(void) {
 				// get number of BMS
 				Parse_ChargeEnabled(msg.header.ExtId, msg.data, &balancing_bms_count);
 
+				balancing_bms_count = DEFAULT_BMS_COUNT;
+
 				if (balancing_mode == false) {
 					// just entered balancing mode, so start balancing timer
 					HAL_TIM_Base_Start_IT(&htim16);
 
+					sprintf(uart_buff, "Enabling balancing across %d BMS\r\n", balancing_bms_count);
+					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
 					// first iteration so also skip waiting for the timer lmao
 					update_balancing = true;
-
-					sprintf(uart_buff, "Enabling balancing across %d BMS'\r\n", balancing_bms_count);
-					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 					for (int i = 0; i < balancing_bms_count; i++) {
 						balancing_bms_average_voltages[i] = average_voltage;
@@ -294,7 +296,7 @@ int main(void) {
 			}
 		}
 
-#ifndef BMS_DEBUG_HEARTBEAT
+#if BMS_DEBUG_HEARTBEAT == 0
 		// check if heartbeat has expired
 		if ((HAL_GetTick() - CAN_count_between_heartbeats) > HEARTBEAT_TIMEOUT) {
 			sprintf(uart_buff, "Heartbeat timer expired (been %d ms), turning off...\r\n", (HAL_GetTick() - CAN_count_between_heartbeats));
@@ -383,7 +385,7 @@ int main(void) {
 			// clear flag - wait for next reading period
 			take_voltage_reading = false;
 
-#ifdef BMS_DEBUG_BALANCING
+#if BMS_DEBUG_BALANCING == 1
 			if (balancing_bms_average_voltages[0] == 0) {
 				sprintf(uart_buff, "Enabling balancing across %d BMS'\r\n", balancing_bms_count);
 				HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
@@ -414,14 +416,23 @@ int main(void) {
 					// parse reading
 					current_temp_reading = parse_temp_readings(raw_temp_readings, &temp_error);
 
-#ifndef BMS_DISABLE_PRINT_TEMPS
+#if BMS_DISABLE_PRINT_TEMPS == 0
 					sprintf(uart_buff, "Temps");
 					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 #endif
 
 					// transmit readings
 					for (int i = 0; i < NUM_TEMP_BLOCKS; i++) {
-						temp_msg = Compose_BMS_TransmitTemperature(bms_id, i, &current_temp_reading.temps[i * NUM_TEMPS_PER_BLOCK]);
+						uint8_t buff[NUM_TEMPS_PER_BLOCK];
+						memset(buff, 0, NUM_TEMPS_PER_BLOCK);
+
+						for (int j = 0; j < NUM_TEMPS_PER_BLOCK; j++) {
+							if ((i * NUM_TEMPS_PER_BLOCK + j) < NUM_TEMPS) {
+								buff[j] = current_temp_reading.temps[i * NUM_TEMPS_PER_BLOCK + j];
+							}
+						}
+
+						temp_msg = Compose_BMS_TransmitTemperature(bms_id, i, buff);
 						header.ExtId = temp_msg.id;
 						header.DLC = sizeof(temp_msg.data);
 						HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
@@ -431,7 +442,7 @@ int main(void) {
 					HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 					HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
-#ifndef BMS_DISABLE_PRINT_TEMPS
+#if BMS_DISABLE_PRINT_TEMPS == 0
 					sprintf(uart_buff, "1: %d %d %d %d\t", current_temp_reading.temps[0], current_temp_reading.temps[1], current_temp_reading.temps[2], current_temp_reading.temps[3]);
 					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 

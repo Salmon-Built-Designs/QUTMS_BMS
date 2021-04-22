@@ -11,7 +11,8 @@
 #include "main.h"
 
 #define MAX_NUM_READINGS 9
-#define NUM_TEMPS (14+2)
+#define NUM_TEMPS 14
+#define NUM_BALANCE_TEMPS 2
 #define NUM_TEMP_LINES 5
 
 
@@ -46,7 +47,7 @@ enum temp_lines {
 };
 
 struct temp_reading {
-	uint8_t temps[NUM_TEMPS];
+	uint8_t temps[NUM_TEMPS+NUM_BALANCE_TEMPS];
 };
 
 typedef struct temp_reading temp_reading;

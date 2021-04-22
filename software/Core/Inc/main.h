@@ -107,8 +107,8 @@ void Error_Handler(void);
 // 30 seconds
 #define HEARTBEAT_TIMEOUT 30000
 
-// corresponds to 40 seconds, with voltages read at 250ms
-#define NUM_BAD_VOLTAGE_COUNT 160
+// corresponds to 10 seconds, with voltages read at 250ms
+#define NUM_BAD_VOLTAGE_COUNT 40
 
 extern bool take_voltage_reading;
 extern bool update_balancing;
@@ -117,7 +117,7 @@ extern bool update_balancing;
 #define BALANCING_GROUP_2 0b01010
 
 // balance anything more than 50mv above the average
-#define BALANCING_THRESHOLD 50
+#define BALANCING_THRESHOLD 15
 
 extern bool balancing_mode;
 /* USER CODE END Private defines */
