@@ -88,7 +88,11 @@ bool balancing_mode = false;
 uint16_t balancing_bms_average_voltages[16];
 uint8_t balancing_bms_count = DEFAULT_BMS_COUNT;
 
+bool first_heartbeat = false;
+
 char uart_buff[80];
+
+HAL_StatusTypeDef BMS_CAN_AddTxMessage(CAN_HandleTypeDef *hcan, CAN_TxHeaderTypeDef *pHeader, uint8_t aData[], uint32_t *pTxMailbox);
 /* USER CODE END 0 */
 
 /**
@@ -187,13 +191,20 @@ int main(void) {
 	CAN_error = true;
 	MX_CAN_Init();
 
+	sprintf(uart_buff, "ID: %d\r\n", bms_id);
+	HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
 	// small delay to wait for all BMS to turn CAN on before we start the peripheral properly
-	HAL_Delay(500);
+	HAL_Delay(400);
 
 	Configure_CAN(&hcan);
 	CAN_error = false;
 
-	HAL_Delay(250);
+	HAL_Delay(100);
+
+	for (int i = 0; i < bms_id; i++) {
+		HAL_Delay(50);
+	}
 
 	// reset voltage error count
 	memset(voltage_error_count, 0, 10);
@@ -215,6 +226,8 @@ int main(void) {
 
 	sprintf(uart_buff, "\r\nStart\r\n");
 	HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+
+	first_heartbeat = false;
 
 	while (1) {
 		/* USER CODE END WHILE */
@@ -255,6 +268,7 @@ int main(void) {
 
 			if (msg.header.ExtId == AMS_HeartbeatResponse_ID) {
 				CAN_count_between_heartbeats = HAL_GetTick();  // reset CAN heartbeat timer
+				first_heartbeat = true;
 			}
 
 			// check if other bms in series is broadcasting average voltage
@@ -263,6 +277,7 @@ int main(void) {
 			// check for enable balancing
 			else if (msg.header.ExtId == BMS_ChargeEnabled_ID) {
 				CAN_count_between_heartbeats = HAL_GetTick();  // reset CAN heartbeat timer
+				first_heartbeat = true;
 
 				// get number of BMS
 				Parse_ChargeEnabled(msg.header.ExtId, msg.data, &balancing_bms_count);
@@ -352,7 +367,7 @@ int main(void) {
 				voltage_msg = Compose_BMS_TransmitVoltage(bms_id, i, group_voltages);
 				header.ExtId = voltage_msg.id;
 				header.DLC = sizeof(voltage_msg.data);
-				HAL_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
+				BMS_CAN_AddTxMessage(&hcan, &header, voltage_msg.data, &txMailbox);
 			}
 
 			// calculate average voltage
@@ -370,7 +385,7 @@ int main(void) {
 					voltage_error_msg = Compose_BMS_BadCellVoltage(bms_id, i, current_voltages[i]);
 					header.ExtId = voltage_error_msg.id;
 					header.DLC = sizeof(voltage_error_msg.data);
-					HAL_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data, &txMailbox);
+					BMS_CAN_AddTxMessage(&hcan, &header, voltage_error_msg.data, &txMailbox);
 
 					sprintf(uart_buff, "Bad Voltage at %d: %d\r\n", i, current_voltages[i]);
 					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
@@ -435,7 +450,7 @@ int main(void) {
 						temp_msg = Compose_BMS_TransmitTemperature(bms_id, i, buff);
 						header.ExtId = temp_msg.id;
 						header.DLC = sizeof(temp_msg.data);
-						HAL_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
+						BMS_CAN_AddTxMessage(&hcan, &header, temp_msg.data, &txMailbox);
 					}
 
 					// sent a temp reading, so flash the LEDs
@@ -480,7 +495,7 @@ int main(void) {
 								temp_error_msg = Compose_BMS_BadCellTemperature(bms_id, i, current_temp_reading.temps[i]);
 								header.ExtId = temp_error_msg.id;
 								header.DLC = sizeof(temp_error_msg.data);
-								HAL_CAN_AddTxMessage(&hcan, &header, temp_error_msg.data, &txMailbox);
+								BMS_CAN_AddTxMessage(&hcan, &header, temp_error_msg.data, &txMailbox);
 
 								sprintf(uart_buff, "Bad Temp at %d: %d\r\n", i, current_temp_reading.temps[i]);
 								HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
@@ -593,7 +608,7 @@ int main(void) {
 			balancing_msg = Compose_BMS_TransmitBalancing(bms_id, average_voltage, balancing_state);
 			header.ExtId = balancing_msg.id;
 			header.DLC = sizeof(balancing_msg.data);
-			HAL_CAN_AddTxMessage(&hcan, &header, balancing_msg.data, &txMailbox);
+			BMS_CAN_AddTxMessage(&hcan, &header, balancing_msg.data, &txMailbox);
 
 			// clear flag
 			update_balancing = false;
@@ -789,6 +804,15 @@ uint8_t startup_procedure() {
 
 	// everything is fine
 	return 1;
+}
+
+
+HAL_StatusTypeDef BMS_CAN_AddTxMessage(CAN_HandleTypeDef *hcan, CAN_TxHeaderTypeDef *pHeader, uint8_t aData[], uint32_t *pTxMailbox) {
+	if (first_heartbeat) {
+		return HAL_CAN_AddTxMessage(hcan, pHeader, aData, pTxMailbox);
+	} else {
+		return HAL_ERROR;
+	}
 }
 
 /* USER CODE END 4 */
