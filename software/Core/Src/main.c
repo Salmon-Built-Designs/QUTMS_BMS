@@ -540,7 +540,7 @@ int main(void) {
 			HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
 			for (int i = 0; i < NUM_VOLTAGES; i++) {
-				deltas[i] = balancing_average - current_voltages[i];
+				deltas[i] = current_voltages[i] - balancing_average;
 
 				// if it's less than the average we don't care about it
 				if (deltas[i] < 0) {
