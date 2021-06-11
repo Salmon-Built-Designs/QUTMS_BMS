@@ -40,23 +40,15 @@
 // variables
 
 // functions
-HAL_StatusTypeDef bq769x0_reg_write_byte(I2C_HandleTypeDef *hi2c, uint8_t reg,
-		uint8_t value);
-HAL_StatusTypeDef bq769x0_reg_write_bytes(I2C_HandleTypeDef *hi2c, uint8_t reg,
-		uint8_t *buffer, size_t length);
-HAL_StatusTypeDef bq769x0_reg_read_byte(I2C_HandleTypeDef *hi2c, uint8_t reg,
-		uint8_t *value);
-HAL_StatusTypeDef bq769x0_reg_read_bytes(I2C_HandleTypeDef *hi2c, uint8_t reg,
-		uint8_t *buffer, size_t length);
+HAL_StatusTypeDef bq769x0_reg_write_byte(I2C_HandleTypeDef *hi2c, uint8_t reg, uint8_t value);
+HAL_StatusTypeDef bq769x0_reg_write_bytes(I2C_HandleTypeDef *hi2c, uint8_t reg, uint8_t *buffer, size_t length);
+HAL_StatusTypeDef bq769x0_reg_read_byte(I2C_HandleTypeDef *hi2c, uint8_t reg, uint8_t *value);
+HAL_StatusTypeDef bq769x0_reg_read_bytes(I2C_HandleTypeDef *hi2c, uint8_t reg, uint8_t *buffer, size_t length);
 
-HAL_StatusTypeDef bq769x0_read_gain_and_offset(I2C_HandleTypeDef *hi2c,
-		uint8_t *gain, uint8_t *offset);
-HAL_StatusTypeDef bq769x0_read_voltage(I2C_HandleTypeDef *hi2c, int cell,
-		uint16_t *voltage);
-HAL_StatusTypeDef bq769x0_read_voltage_group(I2C_HandleTypeDef *hi2c, int group_num,
-		uint16_t voltages[4]);
-HAL_StatusTypeDef bq769x0_read_pack_voltage(I2C_HandleTypeDef *hi2c, int total_cells,
-		uint16_t *voltage);
+HAL_StatusTypeDef bq769x0_read_gain_and_offset(I2C_HandleTypeDef *hi2c, uint8_t *gain, uint8_t *offset);
+HAL_StatusTypeDef bq769x0_read_voltage(I2C_HandleTypeDef *hi2c, int cell, uint16_t *voltage);
+HAL_StatusTypeDef bq769x0_read_voltage_group(I2C_HandleTypeDef *hi2c, int group_num, uint16_t voltages[4]);
+HAL_StatusTypeDef bq769x0_read_pack_voltage(I2C_HandleTypeDef *hi2c, int total_cells, uint16_t *voltage);
 
 HAL_StatusTypeDef bq769x0_set_under_voltage(I2C_HandleTypeDef *hi2c, uint16_t under_voltage);
 HAL_StatusTypeDef bq769x0_set_over_voltage(I2C_HandleTypeDef *hi2c, uint16_t over_voltage);
@@ -65,11 +57,9 @@ HAL_StatusTypeDef bq769x0_set_DSG(I2C_HandleTypeDef *hi2c, uint8_t value);
 HAL_StatusTypeDef bq769x0_set_CHG(I2C_HandleTypeDef *hi2c, uint8_t value);
 
 HAL_StatusTypeDef bq769x0_reset_cell_balancing(I2C_HandleTypeDef *hi2c);
-HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c,
-		uint8_t cell_num, uint8_t state);
-
+HAL_StatusTypeDef bq769x0_set_cell_balancing(I2C_HandleTypeDef *hi2c, uint8_t cell_num, uint8_t state);
+HAL_StatusTypeDef bq769x0_set_cell_balancing_reg(I2C_HandleTypeDef *hi2c, uint8_t reg_idx, uint8_t value);
 
 HAL_StatusTypeDef bq769x0_enter_shipping_mode(I2C_HandleTypeDef *hi2c);
-
 
 #endif /* INC_BQ769X0_H_ */

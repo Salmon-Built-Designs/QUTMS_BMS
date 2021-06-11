@@ -27,19 +27,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
-typedef struct {
-	uint16_t High;
-	uint16_t Low;
-} TMP_Period;
-
-struct TMP_Period_Records {
-	TMP_Period Line1[4];
-	TMP_Period Line2[4];
-	TMP_Period Line3[3];
-	TMP_Period Line4[4];
-	TMP_Period Line5[4];
-};
-
 /* USER CODE END TD */
 
 /* Private define ------------------------------------------------------------*/
@@ -54,8 +41,6 @@ struct TMP_Period_Records {
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-int tempsegment = 0;
-volatile struct TMP_Period_Records TMP05_Period_Records;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,6 +56,8 @@ volatile struct TMP_Period_Records TMP05_Period_Records;
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim14;
+extern TIM_HandleTypeDef htim16;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -179,6 +166,40 @@ void TIM3_IRQHandler(void)
   /* USER CODE BEGIN TIM3_IRQn 1 */
 
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM14 global interrupt.
+  */
+void TIM14_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM14_IRQn 0 */
+
+	// tim14 ticked over - time for voltage reading
+	take_voltage_reading = true;
+
+  /* USER CODE END TIM14_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim14);
+  /* USER CODE BEGIN TIM14_IRQn 1 */
+
+  /* USER CODE END TIM14_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM16 global interrupt.
+  */
+void TIM16_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM16_IRQn 0 */
+
+	// tim16 ticked over - been 1s, update balancing
+	update_balancing = true;
+
+  /* USER CODE END TIM16_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim16);
+  /* USER CODE BEGIN TIM16_IRQn 1 */
+
+  /* USER CODE END TIM16_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
