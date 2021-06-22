@@ -1,12 +1,12 @@
 #MicroXplorer Configuration settings - do not modify
 CAN.BS1=CAN_BS1_13TQ
 CAN.BS2=CAN_BS2_2TQ
-CAN.CalculateBaudRate=500000
-CAN.CalculateTimeBit=2000.00
-CAN.CalculateTimeQuantum=125.0
+CAN.CalculateBaudRate=1000000
+CAN.CalculateTimeBit=1000.00
+CAN.CalculateTimeQuantum=62.5
 CAN.IPParameters=CalculateTimeQuantum,Prescaler,BS1,RFLM,Mode,BS2,CalculateTimeBit,CalculateBaudRate
 CAN.Mode=CAN_MODE_NORMAL
-CAN.Prescaler=6
+CAN.Prescaler=3
 CAN.RFLM=ENABLE
 File.Version=6
 GPIO.groupedBy=Group By Peripherals
