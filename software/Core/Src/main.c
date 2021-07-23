@@ -309,6 +309,18 @@ int main(void)
 				Parse_TransmitBalancing(msg.header.ExtId, msg.data, &recieved_id, &recieved_average_voltage, &recieved_balancing_state);
 
 				balancing_bms_average_voltages[recieved_id] = recieved_average_voltage;
+			} else if (msg.header.ExtId == BMS_Shutdown_ID) {
+				// AMS (or telemetry) requested shutdown
+
+				// broadcast shutdown of this BMS on CAN
+				BMS_ShutdownAck_t shutdownAck = Compose_BMS_ShutdownAck(bms_id);
+				header.ExtId = shutdownAck.id;
+				header.DLC = sizeof(shutdownAck.data);
+				BMS_CAN_AddTxMessage(&hcan, &header, shutdownAck.data, &txMailbox);
+
+				// turn off
+				BQ_result = bq769x0_set_DSG(&hi2c1, 0);
+				BQ_result = bq769x0_enter_shipping_mode(&hi2c1);
 			}
 		}
 
