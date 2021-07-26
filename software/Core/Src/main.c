@@ -96,21 +96,20 @@ HAL_StatusTypeDef BMS_CAN_AddTxMessage(CAN_HandleTypeDef *hcan, CAN_TxHeaderType
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
-  /* USER CODE BEGIN 1 */
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 	// init 1mhz clock
 	SystemClock_1MHz_Config();
 
@@ -125,25 +124,25 @@ int main(void)
 	}
 
 	// proceed at full clock speed
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-  /* USER CODE END SysInit */
+	/* USER CODE BEGIN SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_I2C1_Init();
-  MX_USART1_UART_Init();
-  MX_CAN_Init();
-  MX_TIM2_Init();
-  MX_TIM1_Init();
-  MX_TIM3_Init();
-  MX_TIM14_Init();
-  MX_TIM16_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_I2C1_Init();
+	MX_USART1_UART_Init();
+	MX_CAN_Init();
+	MX_TIM2_Init();
+	MX_TIM1_Init();
+	MX_TIM3_Init();
+	MX_TIM14_Init();
+	MX_TIM16_Init();
+	/* USER CODE BEGIN 2 */
 
 	// start as LOW to be good
 	HAL_GPIO_WritePin(nALARM_GPIO_Port, nALARM_Pin, GPIO_PIN_RESET);
@@ -157,10 +156,10 @@ int main(void)
 	// read BMS ID
 	uint8_t bms_id = GetHardwareID();
 
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 
 	uint32_t txMailbox = 0;
 	BMS_TransmitVoltage_t voltage_msg;
@@ -231,9 +230,9 @@ int main(void)
 	first_heartbeat = false;
 
 	while (1) {
-    /* USER CODE END WHILE */
+		/* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
@@ -265,62 +264,71 @@ int main(void)
 		// check CAN
 		while (HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0) > 0) {
 			CAN_MSG_Generic_t msg;
-			HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &(msg.header), msg.data);
+			CAN_RxHeaderTypeDef rxHeader;
+			if (HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &rxHeader, msg.data) == HAL_OK) {
+				if (rxHeader.IDE == CAN_ID_EXT) {
+					if (rxHeader.ExtId == AMS_HeartbeatResponse_ID) {
+						CAN_count_between_heartbeats = HAL_GetTick();  // reset CAN heartbeat timer
+						first_heartbeat = true;
+					}
 
-			if (msg.header.ExtId == AMS_HeartbeatResponse_ID) {
-				CAN_count_between_heartbeats = HAL_GetTick();  // reset CAN heartbeat timer
-				first_heartbeat = true;
-			}
+					// check if other bms in series is broadcasting average voltage
+					// TODO:
 
-			// check if other bms in series is broadcasting average voltage
-			// TODO:
+					// check for enable balancing
+					else if (rxHeader.ExtId == BMS_ChargeEnabled_ID) {
+						CAN_count_between_heartbeats = HAL_GetTick();  // reset CAN heartbeat timer
+						first_heartbeat = true;
 
-			// check for enable balancing
-			else if (msg.header.ExtId == BMS_ChargeEnabled_ID) {
-				CAN_count_between_heartbeats = HAL_GetTick();  // reset CAN heartbeat timer
-				first_heartbeat = true;
+						// get number of BMS
+						Parse_ChargeEnabled(rxHeader.ExtId, msg.data, &balancing_bms_count);
 
-				// get number of BMS
-				Parse_ChargeEnabled(msg.header.ExtId, msg.data, &balancing_bms_count);
+						//balancing_bms_count = DEFAULT_BMS_COUNT;
 
-				balancing_bms_count = DEFAULT_BMS_COUNT;
+						if (balancing_mode == false) {
+							// just entered balancing mode, so start balancing timer
+							HAL_TIM_Base_Start_IT(&htim16);
 
-				if (balancing_mode == false) {
-					// just entered balancing mode, so start balancing timer
-					HAL_TIM_Base_Start_IT(&htim16);
+							sprintf(uart_buff, "Enabling balancing across %d BMS\r\n", balancing_bms_count);
+							HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
 
-					sprintf(uart_buff, "Enabling balancing across %d BMS\r\n", balancing_bms_count);
-					HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
+							// first iteration so also skip waiting for the timer lmao
+							update_balancing = true;
 
-					// first iteration so also skip waiting for the timer lmao
-					update_balancing = true;
+							for (int i = 0; i < balancing_bms_count; i++) {
+								balancing_bms_average_voltages[i] = average_voltage;
+							}
+						}
 
-					for (int i = 0; i < balancing_bms_count; i++) {
-						balancing_bms_average_voltages[i] = average_voltage;
+						balancing_mode = true;
+					} else if ((rxHeader.ExtId & ~(0b1111)) == BMS_TransmitBalancing_ID) {
+						// bms balancing update, update saved
+						uint8_t recieved_id = 0;
+						uint16_t recieved_average_voltage = 0;
+						uint16_t recieved_balancing_state = 0;
+						Parse_TransmitBalancing(rxHeader.ExtId, msg.data, &recieved_id, &recieved_average_voltage, &recieved_balancing_state);
+
+						balancing_bms_average_voltages[recieved_id] = recieved_average_voltage;
+					} else if (rxHeader.ExtId == BMS_Shutdown_ID) {
+						// AMS (or telemetry) requested shutdown
+
+						// broadcast shutdown of this BMS on CAN
+						BMS_ShutdownAck_t shutdownAck = Compose_BMS_ShutdownAck(bms_id);
+						header.ExtId = shutdownAck.id;
+						header.DLC = sizeof(shutdownAck.data);
+						BMS_CAN_AddTxMessage(&hcan, &header, shutdownAck.data, &txMailbox);
+
+						// wait 1ms to ensure transmission
+						HAL_Delay(1);
+
+						// turn off
+						BQ_result = bq769x0_set_DSG(&hi2c1, 0);
+						BQ_result = bq769x0_enter_shipping_mode(&hi2c1);
+
+						// stall till shutdown
+						HAL_Delay(100);
 					}
 				}
-
-				balancing_mode = true;
-			} else if ((msg.header.ExtId & ~(0b1111)) == BMS_TransmitBalancing_ID) {
-				// bms balancing update, update saved
-				uint8_t recieved_id = 0;
-				uint16_t recieved_average_voltage = 0;
-				uint16_t recieved_balancing_state = 0;
-				Parse_TransmitBalancing(msg.header.ExtId, msg.data, &recieved_id, &recieved_average_voltage, &recieved_balancing_state);
-
-				balancing_bms_average_voltages[recieved_id] = recieved_average_voltage;
-			} else if (msg.header.ExtId == BMS_Shutdown_ID) {
-				// AMS (or telemetry) requested shutdown
-
-				// broadcast shutdown of this BMS on CAN
-				BMS_ShutdownAck_t shutdownAck = Compose_BMS_ShutdownAck(bms_id);
-				header.ExtId = shutdownAck.id;
-				header.DLC = sizeof(shutdownAck.data);
-				BMS_CAN_AddTxMessage(&hcan, &header, shutdownAck.data, &txMailbox);
-
-				// turn off
-				BQ_result = bq769x0_set_DSG(&hi2c1, 0);
-				BQ_result = bq769x0_enter_shipping_mode(&hi2c1);
 			}
 		}
 
@@ -628,50 +636,45 @@ int main(void)
 		}
 
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+	RCC_PeriphCLKInitTypeDef PeriphClkInit = { 0 };
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI48;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSI48;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		Error_Handler();
+	}
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_I2C1;
-  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
-  PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK) {
+		Error_Handler();
+	}
+	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1 | RCC_PERIPHCLK_I2C1;
+	PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
+	PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
+		Error_Handler();
+	}
 }
 
 /* USER CODE BEGIN 4 */
@@ -824,7 +827,6 @@ uint8_t startup_procedure() {
 	return 1;
 }
 
-
 HAL_StatusTypeDef BMS_CAN_AddTxMessage(CAN_HandleTypeDef *hcan, CAN_TxHeaderTypeDef *pHeader, uint8_t aData[], uint32_t *pTxMailbox) {
 	if (first_heartbeat) {
 		return HAL_CAN_AddTxMessage(hcan, pHeader, aData, pTxMailbox);
@@ -836,12 +838,11 @@ HAL_StatusTypeDef BMS_CAN_AddTxMessage(CAN_HandleTypeDef *hcan, CAN_TxHeaderType
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+	/* USER CODE BEGIN Error_Handler_Debug */
 
 	sprintf(uart_buff, "Error\r\n");
 	HAL_UART_Transmit(&huart1, uart_buff, strlen(uart_buff), HAL_MAX_DELAY);
@@ -862,7 +863,7 @@ void Error_Handler(void)
 	/*while (1) {
 	 HAL_Delay(100);
 	 }*/
-  /* USER CODE END Error_Handler_Debug */
+	/* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT

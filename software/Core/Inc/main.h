@@ -105,7 +105,7 @@ void Error_Handler(void);
 #define DEFAULT_BMS_COUNT 6
 
 // 30 seconds
-#define HEARTBEAT_TIMEOUT 30000
+#define HEARTBEAT_TIMEOUT 5000
 
 // corresponds to 10 seconds, with voltages read at 250ms
 #define NUM_BAD_VOLTAGE_COUNT 40
