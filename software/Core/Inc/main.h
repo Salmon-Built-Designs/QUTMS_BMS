@@ -100,7 +100,7 @@ void Error_Handler(void);
 #define NUM_TEMPS_PER_BLOCK 6
 
 #define OVER_VOLTAGE 3700
-#define UNDER_VOLTAGE 2400
+#define UNDER_VOLTAGE 2000
 
 #define DEFAULT_BMS_COUNT 6
 

@@ -830,7 +830,7 @@ uint8_t startup_procedure() {
 HAL_StatusTypeDef BMS_CAN_AddTxMessage(CAN_HandleTypeDef *hcan, CAN_TxHeaderTypeDef *pHeader, uint8_t aData[], uint32_t *pTxMailbox) {
 	if (first_heartbeat) {
 		// stall until we have a free spot to send this message
-		while (HAL_CAN_GetTxMailboxesFreeLevel(hcan) == 0);
+		//while (HAL_CAN_GetTxMailboxesFreeLevel(hcan) == 0);
 
 		return HAL_CAN_AddTxMessage(hcan, pHeader, aData, pTxMailbox);
 	} else {
